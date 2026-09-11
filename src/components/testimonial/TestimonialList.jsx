@@ -25,9 +25,9 @@ import { formatImageUrl } from "../../dto/output/homepageOutputs";
 
 export default function TestimonialList({
   initialData = null,
-  onEdit,
-  onDelete,
-}) {
+  onEdit = null,
+  onDelete = null,
+} = {}) {
   const navigate = useNavigate();
   const location = useLocation();
 

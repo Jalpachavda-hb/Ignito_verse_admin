@@ -25,7 +25,7 @@ import {
 import { getHomeTrustedLogoList } from "../../services/homepageService";
 import { formatImageUrl } from "../../dto/output/trustedByLogoOutputs";
 
-export default function LogoList({ initialData = null, onDelete }) {
+export default function LogoList({ initialData = null, onDelete = () => {} } = {}) {
   // State management
   const [logos, setLogos] = useState(initialData || []);
   const [loading, setLoading] = useState(false);

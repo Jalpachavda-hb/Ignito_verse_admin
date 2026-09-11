@@ -8,7 +8,7 @@ import {
   ErrorIcon,
   CheckCircleIcon,
 } from "../../icons";
-import { validateAdminCredential, loginUser } from "../../services/authService";
+import { validateAdminCredential } from "../../services/authService";
 
 export default function SignInForm() {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export default function SignInForm() {
     setIsLoading(true);
 
     try {
-      const result = await validateAdminCredential(trimmedUser, password);
+      const result: any = await validateAdminCredential(trimmedUser, password);
 
       if (result.success) {
         setSuccessMessage(result.message || "Authentication successful! Redirecting...");

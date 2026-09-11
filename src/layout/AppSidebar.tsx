@@ -6,7 +6,6 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  PieChartIcon,
 } from "../icons";
 import {
   BookOpenIcon,
@@ -17,7 +16,6 @@ import {
   MedalAwardIcon,
   TrendingUpIcon,
   BarChartReportIcon,
-  ShoppingCartMenuIcon,
   WebsiteContentIcon,
   HomeMenuIcon,
   HandshakeIcon,
