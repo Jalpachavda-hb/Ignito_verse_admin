@@ -84,10 +84,10 @@ export default function HerosectionList() {
       } else {
         // Fallback to second banner fields if slider array is not populated
         setHeroSection({
-          homeTitle: detail?.homeTitleTwo || "Empower Your Learning Journey",
-          homeSlogan: detail?.homeSloganTwo || "Welcome to IgnitoLearn",
-          homeBannerImage: detail?.homeBannerImageTwo || "/UploadedFiles/banner1.jpg",
-          homeDescription: detail?.homeDescriptionTwo || "Access thousands of industry-certified microcredential programs.",
+          homeTitle: detail?.homeTitleTwo || "",
+          homeSlogan: detail?.homeSloganTwo || "",
+          homeBannerImage: detail?.homeBannerImageTwo || "",
+          homeDescription: detail?.homeDescriptionTwo || "",
         });
       }
     } catch (err) {

@@ -41,6 +41,8 @@ export const UploadSource = Object.freeze({
   DegreeAssignmentFiles: 'DegreeAssignmentFiles',
   EntranceStudentImages: 'EntranceStudentImages',
   StackholdersImage: 'StackholdersImage',
+  Certificate: 'Certificate',
+  MicrocredentialModuleBannerImage: 'MicrocredentialModuleBannerImage',
 });
 
 /**
@@ -81,6 +83,8 @@ export const UploadSourceFolderMap = Object.freeze({
   [UploadSource.DegreeAssignmentFiles]: 'DegreeAssignmentFiles',
   [UploadSource.EntranceStudentImages]: 'EntranceStudentImages',
   [UploadSource.StackholdersImage]: 'StackholdersImage',
+  [UploadSource.Certificate]: 'Course',
+  [UploadSource.MicrocredentialModuleBannerImage]: 'Course',
 });
 
 /**

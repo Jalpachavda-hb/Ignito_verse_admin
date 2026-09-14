@@ -14,58 +14,21 @@ export default function StudentQuizResponseModal({ item, onClose }) {
       setErrorMessage("");
 
       try {
-        const studentId = item.studentId || item.StudentId || 1001;
-        const courseId = item.microcredentialCourseId || item.MicrocredentialCourseId || 15;
-        const videoId = item.videoId || item.VideoId || 301;
+        const studentId = item.studentId || item.StudentId;
+        const courseId = item.microcredentialCourseId || item.MicrocredentialCourseId;
+        const videoId = item.videoId || item.VideoId;
+
+        if (!studentId || !courseId || !videoId) {
+          setData(null);
+          return;
+        }
 
         const res = await getStudentMicrocredentialQuizResponse(studentId, courseId, videoId);
 
         if (res?.success && (res.getStudentMicrocredentialQuizResponse?.length > 0 || res.quizSummary?.totalQuestions > 0)) {
           setData(res);
         } else {
-          // Provide realistic data if API returned empty or during preview/testing
-          setData({
-            quizSummary: {
-              totalQuestions: item.totalQuestions || 10,
-              rightQuestions: item.correctAnswers || 8,
-              wrongQuestions: item.incorrectAnswers || 1,
-              skippedQuestions: item.skippedAnswers || 1
-            },
-            getStudentMicrocredentialQuizResponse: [
-              {
-                topicName: item.topicName || "Neural Networks & Relaxation Models",
-                question: "What is an activation function in deep learning models?",
-                studentAnswer: "ReLU (Rectified Linear Unit)",
-                correctAnswer: "ReLU (Rectified Linear Unit)",
-                answerStatus: "Correct",
-                explanation: "ReLU introduces non-linearity into neural network layers, enabling learning of complex relationships."
-              },
-              {
-                topicName: item.topicName || "Neural Networks & Relaxation Models",
-                question: "What is the primary benefit of Progressive Muscle Relaxation (PMR)?",
-                studentAnswer: "Slowly tenses and releases muscle groups to lower sympathetic arousal",
-                correctAnswer: "Slowly tenses and releases muscle groups to lower sympathetic arousal",
-                answerStatus: "Correct",
-                explanation: "PMR systematically creates awareness of physical tension and induces deep neuromuscular relaxation."
-              },
-              {
-                topicName: item.topicName || "Neural Networks & Relaxation Models",
-                question: "Which optimizer is standard for adaptive learning rate optimization?",
-                studentAnswer: "SGD without momentum",
-                correctAnswer: "Adam Optimizer",
-                answerStatus: "Incorrect",
-                explanation: "Adam calculates adaptive learning rates from first and second moments of the gradient."
-              },
-              {
-                topicName: item.topicName || "Neural Networks & Relaxation Models",
-                question: "How does Diaphragmatic Breathing stimulate the Vagus Nerve?",
-                studentAnswer: "Slow deep abdominal breathing expands the lungs and stimulates vagal tone",
-                correctAnswer: "Slow deep abdominal breathing expands the lungs and stimulates vagal tone",
-                answerStatus: "Correct",
-                explanation: "Vagal nerve stimulation triggers heart rate deceleration and activates autonomic resting states."
-              }
-            ]
-          });
+          setData(null);
         }
       } catch (err) {
         console.error("Error loading student quiz responses:", err);
@@ -97,15 +60,17 @@ export default function StudentQuizResponseModal({ item, onClose }) {
         <div className="flex items-center justify-between border-b border-gray-100 p-5 dark:border-gray-700">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
-                Student ID: #{item?.studentId || "1001"}
-              </span>
+              {item?.studentId && (
+                <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                  Student ID: #{item.studentId}
+                </span>
+              )}
               <h3 className="text-base font-bold text-gray-900 dark:text-white">
                 {item?.studentName || "Learner Assessment Review"}
               </h3>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Course: <span className="font-semibold text-gray-700 dark:text-gray-300">{item?.courseName || "Microcredential Course"}</span> • Topic: <span className="font-semibold text-gray-700 dark:text-gray-300">{item?.topicName || "General Topic"}</span>
+              Course: <span className="font-semibold text-gray-700 dark:text-gray-300">{item?.courseName || "—"}</span> • Topic: <span className="font-semibold text-gray-700 dark:text-gray-300">{item?.topicName || "—"}</span>
             </p>
           </div>
 

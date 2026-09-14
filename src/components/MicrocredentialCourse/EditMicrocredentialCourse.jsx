@@ -1001,6 +1001,12 @@ export default function EditMicrocredentialCourse() {
                           src={certPreviewUri}
                           alt="Certificate preview"
                           className="size-full object-contain"
+                          onError={(e) => {
+                            if (!certFile) {
+                              e.target.onerror = null;
+                              e.target.src = "/Ignitoverse_Logo.png";
+                            }
+                          }}
                         />
                         <button
                           type="button"
@@ -1072,6 +1078,12 @@ export default function EditMicrocredentialCourse() {
                       src={introPreviewUri}
                       alt="Course Preview"
                       className="size-full object-cover"
+                      onError={(e) => {
+                        if (!introFile) {
+                          e.target.onerror = null;
+                          e.target.src = "/Ignitoverse_Logo.png";
+                        }
+                      }}
                     />
                     <button
                       type="button"
@@ -1114,6 +1126,12 @@ export default function EditMicrocredentialCourse() {
                       src={introPreviewUri}
                       alt="Course Preview"
                       className="size-full object-cover"
+                      onError={(e) => {
+                        if (!introFile) {
+                          e.target.onerror = null;
+                          e.target.src = "/Ignitoverse_Logo.png";
+                        }
+                      }}
                     />
                   ) : (
                     <div className="flex size-full items-center justify-center font-bold text-gray-400 text-lg">

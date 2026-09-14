@@ -2,7 +2,23 @@
  * Centralized API Client for making HTTP requests to .NET Web API.
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const DEFAULT_API_GATEWAY_URL = 'https://1ejrtfddba.execute-api.ap-south-1.amazonaws.com/default/api';
+
+// In production, fallback to the AWS API Gateway backend if VITE_API_BASE_URL is not set
+const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  import.meta.env.PROD ? DEFAULT_API_GATEWAY_URL : '/api'
+);
+
+function getNormalizedBaseUrl(rawUrl) {
+  let url = (rawUrl || '').trim().replace(/\/+$/, '');
+  // If an external URL is provided without /api, ensure /api is appended because .NET controllers require it
+  if ((url.startsWith('http://') || url.startsWith('https://')) && !url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+}
+
+const BASE_URL = getNormalizedBaseUrl(RAW_BASE_URL);
 
 /**
  * Custom fetch wrapper for API communication.
@@ -15,7 +31,7 @@ export async function apiClient(endpoint, options = {}) {
   const cleanEndpoint = endpoint.replace(/^\/?api\//i, '').replace(/^\//, '');
   const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
     ? endpoint
-    : `${BASE_URL.replace(/\/$/, '')}/${cleanEndpoint}`;
+    : `${BASE_URL}/${cleanEndpoint}`;
 
   const defaultHeaders = {
     'Content-Type': 'application/json',

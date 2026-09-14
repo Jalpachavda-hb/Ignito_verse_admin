@@ -96,57 +96,17 @@ export default function MicrocredentialQuizResult() {
         studentItem.quizId
       );
 
-      let attempts = attemptsRes?.quizAttemptList || [];
-      if (attempts.length === 0) {
-        attempts = [
-          {
-            attemptId: 9,
-            quizId: studentItem.quizId,
-            studentId: studentItem.studentId,
-            microcredentialQuizAttemptNumber: 1,
-            score: 0,
-            totalPoints: 10,
-            percentage: 0,
-            totalQuestions: 10,
-            correctQuestionsCount: 0,
-            wrongAnswers: 4,
-            skippedQuestions: 6,
-            grade: "F"
-          },
-          {
-            attemptId: 11,
-            quizId: studentItem.quizId,
-            studentId: studentItem.studentId,
-            microcredentialQuizAttemptNumber: 2,
-            score: 2,
-            totalPoints: 10,
-            percentage: 20,
-            totalQuestions: 10,
-            correctQuestionsCount: 2,
-            wrongAnswers: 5,
-            skippedQuestions: 3,
-            grade: "F"
-          },
-          {
-            attemptId: 3,
-            quizId: studentItem.quizId,
-            studentId: studentItem.studentId,
-            microcredentialQuizAttemptNumber: 3,
-            score: 3,
-            totalPoints: 10,
-            percentage: 30,
-            totalQuestions: 10,
-            correctQuestionsCount: 3,
-            wrongAnswers: 3,
-            skippedQuestions: 4,
-            grade: "F"
-          }
-        ];
-      }
+      const attempts = attemptsRes?.quizAttemptList || [];
       setStudentAttempts(attempts);
 
-      const chosenAttemptId = attemptId || attempts[0]?.attemptId || 9;
+      const chosenAttemptId = attemptId || attempts[0]?.attemptId || null;
       setSelectedAttemptId(chosenAttemptId);
+
+      if (!chosenAttemptId) {
+        setDetailedResult(null);
+        setAuditLoading(false);
+        return;
+      }
 
       // 2. Dynamic API call: GetStudentMicrocredentialQuizResultGetByQuizId
       const resultRes = await getStudentMicrocredentialQuizResultGetByQuizId(
@@ -160,93 +120,27 @@ export default function MicrocredentialQuizResult() {
       let questions = resultRes?.questions || [];
       let answerOptions = resultRes?.answerOptions || [];
 
-      // Determine attempt-specific questions distribution
-      // Relaxation Techniques Quiz-1 (Quiz 3, questions 44-53)
-      const ANSWER_KEY = {
-        44: 90, 45: 94, 46: 97, 47: 101, 48: 105,
-        49: 109, 50: 113, 51: 117, 52: 121, 53: 128
-      };
-      const WRONG_CHOICES = {
-        45: 93, 46: 100, 47: 103, 48: 106, 49: 110, 51: 119, 52: 122
-      };
-
-      const attemptNum = targetAttempt.microcredentialQuizAttemptNumber || (chosenAttemptId === 3 ? 3 : chosenAttemptId === 11 ? 2 : 1);
-
-      let correctQIds = [];
-      let wrongQIds = [];
-      if (attemptNum === 3 || chosenAttemptId === 3) {
-        correctQIds = [44, 45, 46];       // 3 correct
-        wrongQIds = [47, 48, 51];         // 3 wrong (49, 50, 52, 53 skipped)
-      } else if (attemptNum === 2 || chosenAttemptId === 11) {
-        correctQIds = [44, 45];           // 2 correct
-        wrongQIds = [46, 47, 48, 49, 51]; // 5 wrong (50, 52, 53 skipped)
-      } else {
-        correctQIds = [];                 // 0 correct
-        wrongQIds = [45, 46, 47, 51];     // 4 wrong (44, 48, 49, 50, 52, 53 skipped)
-      }
-
-      // If questions in API response are missing attempt responses (all NOT_ATTEMPTED as in user's API response), enrich them
-      const hasActualAttempts = questions.some(q => q.attemptStatus === 'ATTEMPTED' || q.isStudentCorrect || (q.studentSelectedOptions && q.studentSelectedOptions !== ""));
-
-      if (!hasActualAttempts && questions.length > 0) {
-        questions = questions.map(q => {
-          const qId = q.questionsId;
-          const isCorrect = correctQIds.includes(qId);
-          const isWrong = wrongQIds.includes(qId);
-          const isSkipped = !isCorrect && !isWrong;
-
-          const correctKey = String(ANSWER_KEY[qId] || q.correctAnswerData || "");
-          let studentChoice = "";
-          if (isCorrect) {
-            studentChoice = correctKey;
-          } else if (isWrong) {
-            studentChoice = String(WRONG_CHOICES[qId] || "");
-          }
-
-          return {
-            ...q,
-            correctAnswerData: correctKey,
-            studentSelectedOptions: studentChoice,
-            isStudentCorrect: isCorrect,
-            studentPointsAwarded: isCorrect ? 1 : 0,
-            attemptStatus: isSkipped ? "NOT_ATTEMPTED" : "ATTEMPTED"
-          };
-        });
-
-        // Synchronize answerOptions
-        answerOptions = answerOptions.map(opt => {
-          const q = questions.find(item => item.questionsId === opt.questionId);
-          const isAnswerKey = String(opt.answerId) === String(q?.correctAnswerData || ANSWER_KEY[opt.questionId]);
-          const isStudentSelected = Boolean(q?.studentSelectedOptions && String(q.studentSelectedOptions) === String(opt.answerId));
-          return {
-            ...opt,
-            isCorrect: isAnswerKey,
-            isStudentSelected
-          };
-        });
-      }
-
-      // Calculate summary statistics exactly matching user specification
+      // Calculate summary statistics matching dynamic response
       const resultData = {
         ...targetAttempt,
         ...(resultRes || {}),
         wrongAnswers: targetAttempt.wrongAnswers ?? resultRes?.wrongAnswers ?? 0,
         skippedQuestions: targetAttempt.skippedQuestions ?? resultRes?.skippedQuestions ?? 0,
-        totalQuestions: targetAttempt.totalQuestions || resultRes?.totalQuestions || questions.length || 10,
+        totalQuestions: targetAttempt.totalQuestions ?? resultRes?.totalQuestions ?? questions.length,
         studentPercentage: targetAttempt.percentage ?? resultRes?.percentage ?? 0,
         percentage: targetAttempt.percentage ?? resultRes?.percentage ?? 0,
-        studentGrade: targetAttempt.grade || resultRes?.grade || "F",
-        grade: targetAttempt.grade || resultRes?.grade || "F",
+        studentGrade: targetAttempt.grade || resultRes?.grade || "N/A",
+        grade: targetAttempt.grade || resultRes?.grade || "N/A",
         studentTotalPoints: targetAttempt.score ?? resultRes?.studentTotalPoints ?? 0,
-        totalPoints: targetAttempt.totalPoints || resultRes?.totalPoints || 10
+        totalPoints: targetAttempt.totalPoints ?? resultRes?.totalPoints ?? 0
       };
 
       const correctAnswers = questions.filter(q => q.isStudentCorrect).length || targetAttempt.correctQuestionsCount || targetAttempt.score || 0;
       const wrongAnswers = resultData.wrongAnswers || 0;
       const skippedQuestions = resultData.skippedQuestions || 0;
-      const totalQuestions = resultData.totalQuestions || questions.length || 10;
+      const totalQuestions = resultData.totalQuestions || questions.length || 0;
       const score = resultData.studentPercentage || resultData.percentage || 0;
-      const grade = resultData.studentGrade || resultData.grade || "F";
+      const grade = resultData.studentGrade || resultData.grade || "N/A";
 
       // Calculate percentages
       const correctPercent = totalQuestions > 0 ? (correctAnswers / totalQuestions * 100).toFixed(1) : "0.0";
@@ -290,7 +184,7 @@ export default function MicrocredentialQuizResult() {
   const handleOpenResultAudit = (studentItem) => {
     setSelectedStudentItem(studentItem);
     setIsAuditModalOpen(true);
-    loadDynamicStudentQuizResult(studentItem, selectedAttemptId || 9);
+    loadDynamicStudentQuizResult(studentItem);
   };
 
   // Switch attempt tab
@@ -299,176 +193,6 @@ export default function MicrocredentialQuizResult() {
     setSelectedAttemptId(attemptId);
     loadDynamicStudentQuizResult(selectedStudentItem, attemptId);
   };
-
-
-  // Helper to construct complete result data matching question details
-  const getFallbackDetailedResult = (attempt) => ({
-    quizId: attempt?.quizId || 3,
-    quizStatus: "Completed",
-    startTime: "09/09/2026 17:04:41",
-    endTime: "09/09/2026 17:04:57",
-    totalPoints: attempt?.totalPoints ?? 10,
-    percentage: attempt?.percentage ?? 0,
-    grade: attempt?.grade || "F",
-    totalQuestions: attempt?.totalQuestions ?? 10,
-    wrongAnswers: attempt?.wrongAnswers ?? 4,
-    skippedQuestions: attempt?.skippedQuestions ?? 6,
-    correctQuestionsCount: attempt?.correctQuestionsCount ?? 0,
-    studentTotalPoints: attempt?.score ?? 0,
-    questions: [
-      {
-        questionsId: 44,
-        questionText: "What is the main purpose of relaxation techniques?",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "90",
-        studentSelectedOptions: ""
-      },
-      {
-        questionsId: 45,
-        questionText: "What is done in deep breathing technique?",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "ATTEMPTED",
-        correctAnswerData: "94",
-        studentSelectedOptions: "93"
-      },
-      {
-        questionsId: 46,
-        questionText: "Yoga is considered as a:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "ATTEMPTED",
-        correctAnswerData: "97",
-        studentSelectedOptions: "100"
-      },
-      {
-        questionsId: 47,
-        questionText: "Meditation helps to improve:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "ATTEMPTED",
-        correctAnswerData: "101",
-        studentSelectedOptions: "103"
-      },
-      {
-        questionsId: 48,
-        questionText: "Progressive Muscle Relaxation (PMR) focuses on:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "105",
-        studentSelectedOptions: ""
-      },
-      {
-        questionsId: 49,
-        questionText: "Relaxation techniques can be used during:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "109",
-        studentSelectedOptions: ""
-      },
-      {
-        questionsId: 50,
-        questionText: "Deep breathing can help to:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "113",
-        studentSelectedOptions: ""
-      },
-      {
-        questionsId: 51,
-        questionText: "Mindfulness means:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "ATTEMPTED",
-        correctAnswerData: "117",
-        studentSelectedOptions: "119"
-      },
-      {
-        questionsId: 52,
-        questionText: "The best environment for relaxation is:",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "121",
-        studentSelectedOptions: ""
-      },
-      {
-        questionsId: 53,
-        questionText: "Which of the following is a relaxation technique?",
-        points: 1,
-        studentPointsAwarded: 0,
-        isStudentCorrect: false,
-        attemptStatus: "NOT_ATTEMPTED",
-        correctAnswerData: "128",
-        studentSelectedOptions: ""
-      }
-    ],
-    answerOptions: [
-      { answerId: 89, questionId: 44, text: "Increase stress", isCorrect: false, isStudentSelected: false },
-      { answerId: 90, questionId: 44, text: "Reduce stress and promote calmness", isCorrect: true, isStudentSelected: false },
-      { answerId: 91, questionId: 44, text: "Waste energy", isCorrect: false, isStudentSelected: false },
-      { answerId: 92, questionId: 44, text: "Avoid sleep", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 93, questionId: 45, text: "Fast breathing", isCorrect: false, isStudentSelected: true },
-      { answerId: 94, questionId: 45, text: "Slow and controlled breathing", isCorrect: true, isStudentSelected: false },
-      { answerId: 95, questionId: 45, text: "Holding breath for a long time", isCorrect: false, isStudentSelected: false },
-      { answerId: 96, questionId: 45, text: "Breathing only through mouth", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 97, questionId: 46, text: "Physical and mental relaxation technique", isCorrect: true, isStudentSelected: false },
-      { answerId: 98, questionId: 46, text: "Computer activity", isCorrect: false, isStudentSelected: false },
-      { answerId: 99, questionId: 46, text: "Competition", isCorrect: false, isStudentSelected: false },
-      { answerId: 100, questionId: 46, text: "Game activity", isCorrect: false, isStudentSelected: true },
-
-      { answerId: 101, questionId: 47, text: "Concentration and mental peace", isCorrect: true, isStudentSelected: false },
-      { answerId: 102, questionId: 47, text: "Noise level", isCorrect: false, isStudentSelected: false },
-      { answerId: 103, questionId: 47, text: "Screen time", isCorrect: false, isStudentSelected: true },
-      { answerId: 104, questionId: 47, text: "Physical injury", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 105, questionId: 48, text: "Relaxing different muscle groups", isCorrect: true, isStudentSelected: false },
-      { answerId: 106, questionId: 48, text: "Running fast", isCorrect: false, isStudentSelected: false },
-      { answerId: 107, questionId: 48, text: "Increasing stress", isCorrect: false, isStudentSelected: false },
-      { answerId: 108, questionId: 48, text: "Avoiding exercise", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 109, questionId: 49, text: "Stressful situations", isCorrect: true, isStudentSelected: false },
-      { answerId: 110, questionId: 49, text: "Only after exams", isCorrect: false, isStudentSelected: false },
-      { answerId: 111, questionId: 49, text: "Only at night", isCorrect: false, isStudentSelected: false },
-      { answerId: 112, questionId: 49, text: "Never", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 113, questionId: 50, text: "Reduce stress and calm the body", isCorrect: true, isStudentSelected: false },
-      { answerId: 114, questionId: 50, text: "Increase anxiety", isCorrect: false, isStudentSelected: false },
-      { answerId: 115, questionId: 50, text: "Reduce concentration", isCorrect: false, isStudentSelected: false },
-      { answerId: 116, questionId: 50, text: "Create tension", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 117, questionId: 51, text: "Focusing on the present moment", isCorrect: true, isStudentSelected: false },
-      { answerId: 118, questionId: 51, text: "Thinking only about the future", isCorrect: false, isStudentSelected: false },
-      { answerId: 119, questionId: 51, text: "Ignoring feelings", isCorrect: false, isStudentSelected: true },
-      { answerId: 120, questionId: 51, text: "Avoiding awareness", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 121, questionId: 52, text: "Calm and peaceful place", isCorrect: true, isStudentSelected: false },
-      { answerId: 122, questionId: 52, text: "Noisy place", isCorrect: false, isStudentSelected: false },
-      { answerId: 123, questionId: 52, text: "Crowded place", isCorrect: false, isStudentSelected: false },
-      { answerId: 124, questionId: 52, text: "Stressful environment", isCorrect: false, isStudentSelected: false },
-
-      { answerId: 125, questionId: 53, text: "Deep breathing", isCorrect: false, isStudentSelected: false },
-      { answerId: 126, questionId: 53, text: "Meditation", isCorrect: false, isStudentSelected: false },
-      { answerId: 127, questionId: 53, text: "Yoga", isCorrect: false, isStudentSelected: false },
-      { answerId: 128, questionId: 53, text: "All of the above", isCorrect: true, isStudentSelected: false }
-    ]
-  });
 
   // Strip/render HTML and decode entities safely
   const cleanHtml = (html) => {

@@ -2,75 +2,6 @@ import React, { useState, useEffect } from "react";
 import { CheckCircleIcon, CloseIcon, InfoIcon, TimeIcon } from "../../icons";
 import { getDegreeQuizQuestionsList } from "../../services/AdminQuizPageService";
 
-// High-quality fallback questions in case backend quiz questions are still empty for a newly added quiz
-const DEFAULT_PREVIEW_QUESTIONS = [
-  {
-    questionsId: 1,
-    question: "What is the main purpose of relaxation techniques?",
-    points: 1,
-    correctAnswerIndex: 1,
-    explanation: "Relaxation techniques activate the parasympathetic nervous system to reduce stress hormones and induce calmness.",
-    options: [
-      "Increase stress",
-      "Reduce stress and promote calmness",
-      "Waste energy",
-      "Avoid sleep"
-    ]
-  },
-  {
-    questionsId: 2,
-    question: "What is done in deep breathing technique?",
-    points: 1,
-    correctAnswerIndex: 1,
-    explanation: "Deep breathing involves diaphragmatic inhalation and controlled, slow exhalation.",
-    options: [
-      "Fast breathing",
-      "Slow and controlled breathing",
-      "Holding breath for a long time",
-      "Breathing only through mouth"
-    ]
-  },
-  {
-    questionsId: 3,
-    question: "Yoga is considered as a:",
-    points: 1,
-    correctAnswerIndex: 0,
-    explanation: "Yoga integrates physical postures, breath control, and meditation for mental and physical well-being.",
-    options: [
-      "Physical and mental relaxation technique",
-      "Computer activity",
-      "Competition",
-      "Game activity"
-    ]
-  },
-  {
-    questionsId: 4,
-    question: "Which of the following hormones is reduced by practicing progressive muscle relaxation?",
-    points: 1,
-    correctAnswerIndex: 2,
-    explanation: "Cortisol is the primary stress hormone released by adrenal glands during chronic anxiety.",
-    options: [
-      "Insulin",
-      "Thyroxine",
-      "Cortisol",
-      "Melatonin"
-    ]
-  },
-  {
-    questionsId: 5,
-    question: "Guided imagery primarily relies on which human sensory experience?",
-    points: 1,
-    correctAnswerIndex: 0,
-    explanation: "Guided imagery uses visualization and sensory suggestions to mentally detach from stress triggers.",
-    options: [
-      "Mental visualization and sensory recall",
-      "Heavy physical weightlifting",
-      "Consuming caffeine",
-      "Rapid eye movements"
-    ]
-  }
-];
-
 export default function QuizPreviewView({ quiz, onExit }) {
   // 'student' | 'answerKey'
   const [previewMode, setPreviewMode] = useState("answerKey");
@@ -82,7 +13,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
   useEffect(() => {
     async function loadQuestions() {
       if (!quiz?.quizId && !quiz?.QuizId) {
-        setQuestions(DEFAULT_PREVIEW_QUESTIONS);
+        setQuestions([]);
         return;
       }
 
@@ -95,24 +26,17 @@ export default function QuizPreviewView({ quiz, onExit }) {
             questionsId: item.questionsId || item.questionId || index + 1,
             question: item.question || item.questionText || `Question ${index + 1}`,
             points: item.points || 1,
-            correctAnswerIndex: item.correctAnswerIndex ?? 1,
-            explanation: item.explanation || "Correct principle verified against course syllabus.",
-            options: item.options && item.options.length > 0
-              ? item.options
-              : [
-                  "Increase stress",
-                  "Reduce stress and promote calmness",
-                  "Waste energy",
-                  "Avoid sleep"
-                ]
+            correctAnswerIndex: item.correctAnswerIndex ?? 0,
+            explanation: item.explanation || "",
+            options: Array.isArray(item.options) ? item.options : []
           }));
           setQuestions(formatted);
         } else {
-          setQuestions(DEFAULT_PREVIEW_QUESTIONS);
+          setQuestions([]);
         }
       } catch (err) {
-        console.warn("Failed to load backend questions, using standard preview data:", err);
-        setQuestions(DEFAULT_PREVIEW_QUESTIONS);
+        console.warn("Failed to load backend questions:", err);
+        setQuestions([]);
       } finally {
         setLoading(false);
       }

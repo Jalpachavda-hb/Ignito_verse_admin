@@ -187,17 +187,26 @@ export default function AddEditMicrocredentialModule() {
               bannerFile: file,
               bannerPreviewUrl: localUrl,
               uploadingBanner: true,
+              bannerUploaded: false,
             }
           : mod
       )
     );
 
     try {
-      const uploadRes = await commonUploadFile(
+      let uploadRes = await commonUploadFile(
         file,
         "UploadSource",
-        "MicrocredentialModuleBannerImage"
+        "CourseBannerImage"
       );
+
+      if (!uploadRes?.filePath && !uploadRes?.documentList?.[0]?.filePath && !uploadRes?.rawData?.filePath) {
+        uploadRes = await commonUploadFile(
+          file,
+          "UploadSource",
+          "MicrocredentialModuleBannerImage"
+        );
+      }
 
       let serverPath = "";
       if (uploadRes?.filePath) {
@@ -217,8 +226,10 @@ export default function AddEditMicrocredentialModule() {
               ? {
                   ...mod,
                   moduleBannerImage: serverPath,
-                  bannerPreviewUrl: formatImageUrl(serverPath),
+                  // Retain the local blob URL for instant preview without 404 network errors
+                  bannerPreviewUrl: localUrl,
                   uploadingBanner: false,
+                  bannerUploaded: true,
                 }
               : mod
           )
@@ -226,7 +237,14 @@ export default function AddEditMicrocredentialModule() {
       } else {
         setModules((prev) =>
           prev.map((mod, i) =>
-            i === index ? { ...mod, uploadingBanner: false } : mod
+            i === index
+              ? {
+                  ...mod,
+                  bannerPreviewUrl: localUrl,
+                  uploadingBanner: false,
+                  bannerUploaded: false,
+                }
+              : mod
           )
         );
       }
@@ -234,7 +252,14 @@ export default function AddEditMicrocredentialModule() {
       console.warn("Banner direct upload deferred to submit:", err);
       setModules((prev) =>
         prev.map((mod, i) =>
-          i === index ? { ...mod, uploadingBanner: false } : mod
+          i === index
+            ? {
+                ...mod,
+                bannerPreviewUrl: localUrl,
+                uploadingBanner: false,
+                bannerUploaded: false,
+              }
+            : mod
         )
       );
     }
@@ -250,6 +275,7 @@ export default function AddEditMicrocredentialModule() {
               bannerFile: null,
               bannerPreviewUrl: "",
               moduleBannerImage: "",
+              bannerUploaded: false,
             }
           : mod
       )
@@ -318,12 +344,20 @@ export default function AddEditMicrocredentialModule() {
       for (const mod of validModules) {
         let finalBanner = mod.moduleBannerImage || "";
 
-        if (mod.bannerFile && !finalBanner) {
-          const uploadRes = await commonUploadFile(
+        if (mod.bannerFile && !mod.bannerUploaded) {
+          let uploadRes = await commonUploadFile(
             mod.bannerFile,
             "UploadSource",
-            "MicrocredentialModuleBannerImage"
+            "CourseBannerImage"
           );
+
+          if (!uploadRes?.filePath && !uploadRes?.documentList?.[0]?.filePath && !uploadRes?.rawData?.filePath) {
+            uploadRes = await commonUploadFile(
+              mod.bannerFile,
+              "UploadSource",
+              "MicrocredentialModuleBannerImage"
+            );
+          }
 
           if (uploadRes?.filePath) {
             finalBanner = uploadRes.filePath;
@@ -607,17 +641,38 @@ export default function AddEditMicrocredentialModule() {
                         className="w-full h-36 object-cover bg-gray-50 dark:bg-gray-800"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "/Ignitoverse_Logo.png";
+                          if (!mod.bannerFile) {
+                            e.target.src = "/Ignitoverse_Logo.png";
+                          }
                         }}
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveBanner(idx)}
-                        className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition-colors"
-                        title="Remove banner image"
-                      >
-                        <TrashBinIcon className="size-4" />
-                      </button>
+                      <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                        <label
+                          className="p-1.5 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors cursor-pointer"
+                          title="Change banner image"
+                        >
+                          <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          <input
+                            type="file"
+                            accept="image/png, image/jpeg, image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleBannerFileChange(idx, file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBanner(idx)}
+                          className="p-1.5 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition-colors"
+                          title="Remove banner image"
+                        >
+                          <TrashBinIcon className="size-4" />
+                        </button>
+                      </div>
                       <span className="absolute bottom-2 left-2 px-2 py-0.5 text-xs bg-black/60 text-white rounded">
                         {mod.uploadingBanner ? "Uploading..." : "Banner Attached"}
                       </span>
@@ -645,7 +700,7 @@ export default function AddEditMicrocredentialModule() {
                       </span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/png, image/jpeg, image/webp"
                         onChange={(e) =>
                           handleBannerFileChange(idx, e.target.files?.[0])
                         }

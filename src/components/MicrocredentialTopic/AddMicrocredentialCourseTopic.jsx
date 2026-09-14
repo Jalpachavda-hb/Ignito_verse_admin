@@ -13,7 +13,6 @@ import {
   getMicrocredentialCourse,
   microCourseTopicAddUpdate,
   commonUploadFile,
-  getMicroCourseTopicDetail,
   getMicrocredentialStudentDownloadDocuments,
   downloadMicroTopicTemplate,
   uploadMicroTopicExcel,
@@ -149,78 +148,20 @@ export default function AddMicrocredentialCourseTopic() {
       setLoadingModules(false);
     }
 
-    try {
-      const detailRes = await getMicroCourseTopicDetail(courseId, 0);
-      if (detailRes && detailRes.success) {
-        const rawTopics =
-          detailRes.getMicroCourseTopicDetailList ||
-          detailRes.microCourseTopicDetailList ||
-          detailRes.topicList ||
-          [];
-
-        if (Array.isArray(rawTopics) && rawTopics.length > 0) {
-          setTopics(
-            rawTopics.map((t) => ({
-              topicName:
-                t.topicName ||
-                t.TopicName ||
-                t.microcredentialTopicName ||
-                t.MicrocredentialTopicName ||
-                "",
-              videoTitle:
-                t.videoTitle ||
-                t.VideoTitle ||
-                t.videoName ||
-                "",
-              topicVideoUrl:
-                t.topicVideoUrl ||
-                t.TopicVideoUrl ||
-                t.videoURL ||
-                t.VideoURL ||
-                t.videoUrl ||
-                t.watchVideoURL ||
-                "",
-              topicPdf:
-                t.topicPdf ||
-                t.TopicPdf ||
-                t.topicDocument ||
-                t.topicPDF ||
-                "",
-              pdfFile: null,
-            }))
-          );
-        }
-
-        if (detailRes.uploadMicroDocument || detailRes.UploadMicroDocument) {
-          setUploadMicroDocument(
-            detailRes.uploadMicroDocument || detailRes.UploadMicroDocument
-          );
-        }
-
-        const rawStudentDocs =
-          detailRes.microcredentialStudentDownloadDocumentList ||
-          detailRes.MicrocredentialStudentDownloadDocumentList ||
-          [];
-
-        if (Array.isArray(rawStudentDocs) && rawStudentDocs.length > 0) {
-          setStudentDocs(
-            rawStudentDocs.map((d) => ({
-              originalFileName:
-                d.originalFileName || d.OriginalFileName || "Student Document",
-              givenFileName: d.givenFileName || d.GivenFileName || "",
-              filePath:
-                d.filePath ||
-                d.microcredentialStudentDownloadDocument ||
-                d.MicrocredentialStudentDownloadDocument ||
-                "",
-              file: null,
-            }))
-          );
-        }
-      }
-    } catch (err) {
-      console.warn("Could not check existing course topics:", err);
-    }
+    // Reset topic list and documents for new topic entry
+    setTopics([
+      {
+        topicName: "",
+        videoTitle: "",
+        topicVideoUrl: "",
+        topicPdf: "",
+        pdfFile: null,
+      },
+    ]);
+    setUploadMicroDocument("");
+    setUploadMicroDocumentFile(null);
+    setMainDocPreviewUrl("");
+    setStudentDocs([]);
   };
 
   // Add a new topic card

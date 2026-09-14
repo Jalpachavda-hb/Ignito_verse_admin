@@ -73,22 +73,6 @@ export default function MicrocredentialCheckpointQuizList() {
     loading: false
   });
 
-  // Fallback demo data if API returns empty
-  const fallbackDemoCourses = [
-    {
-      microcredentialCourseId: 1,
-      microcredentialCourseName: "Relaxation Techniques and Meditation",
-      streamName: "Management",
-      updatedOn: "27 June 2026"
-    },
-    {
-      microcredentialCourseId: 2,
-      microcredentialCourseName: "STRESS MANAGEMENT",
-      streamName: "Management",
-      updatedOn: "11 September 2028"
-    }
-  ];
-
   // 1. Fetch Main Course Topic List
   const loadCourseTopics = useCallback(async () => {
     setLoading(true);
@@ -103,30 +87,18 @@ export default function MicrocredentialCheckpointQuizList() {
         searchInput: searchTerm.trim()
       });
 
-      if (res?.success && Array.isArray(res.microCourseTopicList) && res.microCourseTopicList.length > 0) {
+      if (res?.success && Array.isArray(res.microCourseTopicList)) {
         setCoursesList(res.microCourseTopicList);
-        setTotalRecords(res.pageDetail?.totalRecords || res.microCourseTopicList.length);
+        setTotalRecords(res.pageDetail?.totalRecords ?? res.microCourseTopicList.length);
       } else {
-        // Use fallback if response is empty so table mirrors user screenshot perfectly
-        const filtered = fallbackDemoCourses.filter(
-          (c) =>
-            !searchTerm.trim() ||
-            c.microcredentialCourseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.streamName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setCoursesList(filtered);
-        setTotalRecords(filtered.length);
+        setCoursesList([]);
+        setTotalRecords(0);
       }
     } catch (err) {
       console.error("Failed to load checkpoint courses:", err);
-      const filtered = fallbackDemoCourses.filter(
-        (c) =>
-          !searchTerm.trim() ||
-          c.microcredentialCourseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          c.streamName.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setCoursesList(filtered);
-      setTotalRecords(filtered.length);
+      setErrorMessage(err.message || "Failed to load checkpoint courses.");
+      setCoursesList([]);
+      setTotalRecords(0);
     } finally {
       setLoading(false);
     }
@@ -157,27 +129,12 @@ export default function MicrocredentialCheckpointQuizList() {
       if (res?.success && Array.isArray(res.getMicroCourseCheckpointQuizTopicDetail)) {
         setTopicDetails(res.getMicroCourseCheckpointQuizTopicDetail);
       } else {
-        // Provide contextual mock items if DB returns none
-        setTopicDetails([
-          {
-            microcreditYoutubeDataMasterId: 101,
-            topicName: "Introduction to Stress Reduction",
-            videoTitle: "Lecture 1: The Physiology of Stress & Response Signals",
-            topicVideoUrl: "https://www.youtube.com/watch?v=hnpQrMqDoqE",
-            isCheckpointAvailable: true
-          },
-          {
-            microcreditYoutubeDataMasterId: 102,
-            topicName: "Deep Breathing & Mindfulness Techniques",
-            videoTitle: "Lecture 2: Guided Meditation & Vagus Nerve Stimulation",
-            topicVideoUrl: "https://www.youtube.com/watch?v=inpQrMqDoqF",
-            isCheckpointAvailable: false
-          }
-        ]);
+        setTopicDetails([]);
       }
     } catch (err) {
       console.error("Failed to load topic details:", err);
       setTopicError(err.message || "Failed to load topics.");
+      setTopicDetails([]);
     } finally {
       setTopicLoading(false);
     }
@@ -193,30 +150,15 @@ export default function MicrocredentialCheckpointQuizList() {
 
     try {
       const res = await getMicrocredentialCheckpointQuizData(video.microcreditYoutubeDataMasterId);
-      if (res?.success && Array.isArray(res.getMicrocredentialCheckpointQuizDataList) && res.getMicrocredentialCheckpointQuizDataList.length > 0) {
+      if (res?.success && Array.isArray(res.getMicrocredentialCheckpointQuizDataList)) {
         setQuizQuestions(res.getMicrocredentialCheckpointQuizDataList);
       } else {
-        // Realistic fallback questions
-        setQuizQuestions([
-          {
-            microcredentialYoutubeCheckPointsId: 1,
-            question: "What primary hormone is released by the adrenal cortex during sustained psychological stress?",
-            checkpointQuizTime: 120, // 2:00 mark
-            answer: "Cortisol",
-            explanation: "Cortisol is the primary stress hormone that mobilizes glucose into the bloodstream and modulates bodily stress responses."
-          },
-          {
-            microcredentialYoutubeCheckPointsId: 2,
-            question: "Which branch of the autonomic nervous system is activated by diaphragmatic breathing?",
-            checkpointQuizTime: 245, // 4:05 mark
-            answer: "Parasympathetic Nervous System",
-            explanation: "Slow diaphragmatic breathing stimulates the vagus nerve, initiating the parasympathetic 'rest and digest' response."
-          }
-        ]);
+        setQuizQuestions([]);
       }
     } catch (err) {
       console.error("Failed to preview checkpoint quiz:", err);
       setPreviewError(err.message || "Failed to load checkpoint questions.");
+      setQuizQuestions([]);
     } finally {
       setPreviewLoading(false);
     }
