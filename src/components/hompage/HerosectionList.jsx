@@ -347,7 +347,7 @@ export default function HerosectionList() {
                     className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105 sm:h-56"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/Ignitoverse_Logo.png";
+                      e.target.src = "/Ignitoverse Logonewnew.png";
                     }}
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-900/40 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100">
@@ -425,7 +425,7 @@ export default function HerosectionList() {
                           className="h-full w-full object-cover"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "/Ignitoverse_Logo.png";
+                            e.target.src = "/Ignitoverse Logonew.png";
                           }}
                         />
                       </div>
@@ -571,7 +571,7 @@ export default function HerosectionList() {
                       className="max-h-48 w-full rounded-lg object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "/Ignitoverse_Logo.png";
+                        e.target.src = "/Ignitoverse Logonew.png";
                       }}
                     />
                     <div className="mt-2 flex items-center justify-between px-1 text-xs text-gray-500 dark:text-gray-400">
@@ -673,7 +673,7 @@ export default function HerosectionList() {
                 className="max-h-[70vh] max-w-full rounded-lg object-contain"
                 onError={(e) => {
                   e.target.onerror = null;
-                  e.target.src = "/Ignitoverse_Logo.png";
+                  e.target.src = "/Ignitoverse Logonew.png";
                 }}
               />
             </div>

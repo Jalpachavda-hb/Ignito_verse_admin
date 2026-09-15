@@ -371,7 +371,7 @@ export default function MicrocredentialModuleList() {
                               className="size-full object-cover"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse_Logo.png";
+                                e.target.src = "/Ignitoverse Logonew.png";
                               }}
                             />
                           </button>
@@ -460,11 +460,10 @@ export default function MicrocredentialModuleList() {
               <button
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
-                className={`min-w-8 h-8 px-2.5 rounded-md text-sm font-medium transition-all ${
-                  currentPage === pageNum
+                className={`min-w-8 h-8 px-2.5 rounded-md text-sm font-medium transition-all ${currentPage === pageNum
                     ? "bg-[#e11d48] text-white shadow-sm"
                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                }`}
+                  }`}
               >
                 {pageNum}
               </button>
@@ -505,7 +504,7 @@ export default function MicrocredentialModuleList() {
               className="max-h-[75vh] w-auto mx-auto object-contain rounded-lg"
               onError={(e) => {
                 e.target.onerror = null;
-                e.target.src = "/Ignitoverse_Logo.png";
+                e.target.src = "/Ignitoverse Logonew.png";
               }}
             />
           </div>

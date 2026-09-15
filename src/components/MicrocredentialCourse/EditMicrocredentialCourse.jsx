@@ -1004,7 +1004,7 @@ export default function EditMicrocredentialCourse() {
                           onError={(e) => {
                             if (!certFile) {
                               e.target.onerror = null;
-                              e.target.src = "/Ignitoverse_Logo.png";
+                              e.target.src = "/Ignitoverse Logonew.png";
                             }
                           }}
                         />
@@ -1081,7 +1081,7 @@ export default function EditMicrocredentialCourse() {
                       onError={(e) => {
                         if (!introFile) {
                           e.target.onerror = null;
-                          e.target.src = "/Ignitoverse_Logo.png";
+                          e.target.src = "/Ignitoverse Logonew.png";
                         }
                       }}
                     />
@@ -1129,7 +1129,7 @@ export default function EditMicrocredentialCourse() {
                       onError={(e) => {
                         if (!introFile) {
                           e.target.onerror = null;
-                          e.target.src = "/Ignitoverse_Logo.png";
+                          e.target.src = "/Ignitoverse Logonew.png";
                         }
                       }}
                     />

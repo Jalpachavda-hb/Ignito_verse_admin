@@ -297,11 +297,10 @@ export default function AddTestimonialReview() {
                         onClick={() =>
                           setFormData((p) => ({ ...p, reviewInStar: star }))
                         }
-                        className={`transition duration-150 hover:scale-125 focus:outline-none ${
-                          star <= formData.reviewInStar
+                        className={`transition duration-150 hover:scale-125 focus:outline-none ${star <= formData.reviewInStar
                             ? "text-amber-400"
                             : "text-gray-200 dark:text-gray-700 hover:text-amber-300"
-                        }`}
+                          }`}
                         title={`${star} Star${star > 1 ? "s" : ""}`}
                       >
                         ★
@@ -483,7 +482,7 @@ export default function AddTestimonialReview() {
                       className="h-full w-full object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "/Ignitoverse_Logo.png";
+                        e.target.src = "/Ignitoverse Logonew.png";
                       }}
                     />
                   ) : (

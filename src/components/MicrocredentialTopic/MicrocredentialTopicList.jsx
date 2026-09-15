@@ -18,12 +18,15 @@ import {
   PencilIcon,
   DownloadIcon,
   FileIcon,
+  VideoIcon,
 } from "../../icons";
 import {
   microCourseTopicList,
   microCourseTopicDelete,
   getMicrocredentialStudentDownloadDocuments,
   downloadFileFromUrl,
+  getMicrocredentialTopicByModuleId,
+  getMicrocredentialModuleByCourseId,
 } from "../../services/adminMicrocredentialService";
 import { getMicroCourseTopicDetail } from "../../services/microcredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
@@ -71,6 +74,20 @@ export default function MicrocredentialTopicList() {
   const [topicModalCourse, setTopicModalCourse] = useState(null);
   const [topicModalLoading, setTopicModalLoading] = useState(false);
   const [topicList, setTopicList] = useState([]);
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
+  const [courseModules, setCourseModules] = useState([]);
+
+  // Active module name for topic modal
+  const currentActiveModuleName = useMemo(() => {
+    if (!topicModalCourse) return "";
+    if (selectedModuleId && courseModules.length > 0) {
+      const found = courseModules.find(
+        (m) => (m.microcredentialModuleMasterId || m.id) === selectedModuleId
+      );
+      if (found && found.moduleName) return found.moduleName;
+    }
+    return topicModalCourse.moduleName || "";
+  }, [topicModalCourse, selectedModuleId, courseModules]);
 
   // 2. Microcredential Document View Modal
   const [documentModalCourse, setDocumentModalCourse] = useState(null);
@@ -83,6 +100,24 @@ export default function MicrocredentialTopicList() {
   // 4. Delete Confirmation Modal
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // 5. Watch Video Modal
+  const [activeVideoModal, setActiveVideoModal] = useState(null);
+
+  // Close active video modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && activeVideoModal) {
+        setActiveVideoModal(null);
+      }
+    };
+    if (activeVideoModal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeVideoModal]);
 
   /**
    * Fetches topic courses from backend API using microCourseTopicList with adminId: 1
@@ -216,19 +251,60 @@ export default function MicrocredentialTopicList() {
   // MODAL HANDLERS
   // ===========================================================================
 
-  // 1. Open Topics Modal
+  // 1. Open Topics Modal (Calls GetMicrocredentialTopicByModuleId with microcredentialModuleMasterId)
   const handleOpenTopics = async (course) => {
     setTopicModalCourse(course);
     setTopicModalLoading(true);
     setTopicList([]);
+    setCourseModules([]);
 
-    const id = Number(
+    const moduleId = Number(
+      course.microcredentialModuleMasterId || course.MicrocredentialModuleMasterId || 0
+    );
+    const courseId = Number(
       course.microcredentialCourseId || course.MicrocredentialCourseId || 0
     );
 
-    if (id > 0) {
-      try {
-        const res = await getMicroCourseTopicDetail(id, 0);
+    setSelectedModuleId(moduleId > 0 ? moduleId : null);
+
+    try {
+      // Fetch modules for this course to display module tabs / selector
+      let modules = [];
+      if (courseId > 0) {
+        try {
+          const modRes = await getMicrocredentialModuleByCourseId(courseId);
+          if (modRes && modRes.success && Array.isArray(modRes.microcredentialModuleList)) {
+            modules = modRes.microcredentialModuleList;
+            setCourseModules(modules);
+          }
+        } catch (e) {
+          console.warn("Could not load course modules:", e);
+        }
+      }
+
+      // Determine which module ID to query (prefer the row's moduleId)
+      const targetModuleId = moduleId > 0 ? moduleId : (modules.length > 0 ? modules[0].microcredentialModuleMasterId : 0);
+      setSelectedModuleId(targetModuleId > 0 ? targetModuleId : null);
+
+      if (targetModuleId > 0) {
+        // Call GetMicrocredentialTopicByModuleId API with payload { microcredentialModuleMasterId: targetModuleId }
+        const res = await getMicrocredentialTopicByModuleId(targetModuleId);
+        if (res && res.success && Array.isArray(res.microcredentialTopicList) && res.microcredentialTopicList.length > 0) {
+          setTopicList(res.microcredentialTopicList);
+        } else if (courseId > 0) {
+          // Fallback if module-specific list is empty
+          const fallbackRes = await getMicroCourseTopicDetail(courseId, 0);
+          if (fallbackRes && fallbackRes.success) {
+            const list =
+              fallbackRes.getMicroCourseTopicDetailList ||
+              fallbackRes.microCourseTopicDetailList ||
+              fallbackRes.topicList ||
+              [];
+            setTopicList(Array.isArray(list) ? list : []);
+          }
+        }
+      } else if (courseId > 0) {
+        const res = await getMicroCourseTopicDetail(courseId, 0);
         if (res && res.success) {
           const list =
             res.getMicroCourseTopicDetailList ||
@@ -237,12 +313,31 @@ export default function MicrocredentialTopicList() {
             [];
           setTopicList(Array.isArray(list) ? list : []);
         }
-      } catch (err) {
-        console.warn("Could not load course topics detail:", err);
-      } finally {
-        setTopicModalLoading(false);
       }
-    } else {
+    } catch (err) {
+      console.warn("Could not load course topics detail:", err);
+    } finally {
+      setTopicModalLoading(false);
+    }
+  };
+
+  // Switch active module in modal to show topics for the selected module
+  const handleSelectModule = async (newModuleId) => {
+    if (!newModuleId || newModuleId === selectedModuleId) return;
+    setSelectedModuleId(newModuleId);
+    setTopicModalLoading(true);
+
+    try {
+      const res = await getMicrocredentialTopicByModuleId(newModuleId);
+      if (res && res.success && Array.isArray(res.microcredentialTopicList)) {
+        setTopicList(res.microcredentialTopicList);
+      } else {
+        setTopicList([]);
+      }
+    } catch (err) {
+      console.error("Error switching module topics:", err);
+      setTopicList([]);
+    } finally {
       setTopicModalLoading(false);
     }
   };
@@ -655,7 +750,13 @@ export default function MicrocredentialTopicList() {
                         >
                           {item.microcredentialCourseName || "Untitled Course"}
                         </h4>
-                       
+                        {item.moduleName && (
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                              Module: {item.moduleName}
+                            </span>
+                          </div>
+                        )}
                       </TableCell>
 
                       {/* 4. Topic (Blue circular eye view button) */}
@@ -847,11 +948,19 @@ export default function MicrocredentialTopicList() {
       {topicModalCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-xs animate-fadeIn">
           <div className="relative w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-gray-100 pb-4 dark:border-gray-800">
               <div>
-                <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                  {topicModalCourse.streamName || "Stream"}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                    {topicModalCourse.streamName || "Stream"}
+                  </span>
+                  {currentActiveModuleName && (
+                    <span className="rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                      Module: {currentActiveModuleName}
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-white mt-1">
                   Topics List
                 </h3>
@@ -865,6 +974,9 @@ export default function MicrocredentialTopicList() {
                 onClick={() => {
                   setTopicModalCourse(null);
                   setTopicList([]);
+                  setCourseModules([]);
+                  setSelectedModuleId(null);
+                  setActiveVideoModal(null);
                 }}
                 className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white"
               >
@@ -872,30 +984,61 @@ export default function MicrocredentialTopicList() {
               </button>
             </div>
 
+            {/* Module-wise Tabs Selection (if course has multiple modules) */}
+            {courseModules.length > 1 && (
+              <div className="mt-3 flex items-center gap-2 overflow-x-auto border-b border-gray-100 pb-2.5 dark:border-gray-800">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 shrink-0">
+                  Modules:
+                </span>
+                {courseModules.map((mod) => {
+                  const modId = mod.microcredentialModuleMasterId || mod.id;
+                  const isSelected = selectedModuleId === modId;
+                  return (
+                    <button
+                      key={modId}
+                      type="button"
+                      onClick={() => handleSelectModule(modId)}
+                      className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                        isSelected
+                          ? "bg-brand-500 text-white shadow-xs"
+                          : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      }`}
+                    >
+                      {mod.moduleName || `Module ${modId}`}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Topic List Content */}
             <div className="mt-4 max-h-[60vh] overflow-y-auto pr-1">
               {topicModalLoading ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2">
                   <div className="size-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-                  <span className="text-xs text-gray-400">Loading course topics...</span>
+                  <span className="text-xs text-gray-400">Loading module topics...</span>
                 </div>
               ) : topicList.length > 0 ? (
                 <div className="space-y-3">
                   {topicList.map((topic, idx) => {
                     const title =
-                      topic.microcredentialTopicName ||
                       topic.topicName ||
+                      topic.microcredentialTopicName ||
+                      topic.videoTitle ||
                       topic.topicTitle ||
                       `Topic #${idx + 1}`;
                     const videoUrl =
-                      topic.videoURL || topic.watchVideoURL || topic.videoUrl || "";
-                    const duration =
-                      topic.duration || topic.topicDuration || topic.videoDuration || "";
+                      topic.topicVideoUrl || topic.videoURL || topic.watchVideoURL || topic.videoUrl || "";
+                    const timing =
+                      topic.videoStartTime || topic.videoEndTime
+                        ? `${topic.videoStartTime || "0:00"} - ${topic.videoEndTime || ""}`
+                        : (topic.duration || topic.topicDuration || topic.videoDuration || "");
                     const docPath =
-                      topic.topicDocument || topic.topicPDF || topic.document || "";
+                      topic.topicPdf || topic.topicDocument || topic.topicPDF || topic.document || "";
 
                     return (
                       <div
-                        key={idx}
+                        key={topic.microCourseTopicId || idx}
                         className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 transition hover:border-gray-300 dark:border-gray-800 dark:bg-gray-800/40"
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -908,9 +1051,9 @@ export default function MicrocredentialTopicList() {
                             </h4>
                           </div>
 
-                          {duration && (
+                          {timing && (
                             <span className="shrink-0 rounded-md bg-gray-200/70 px-2 py-0.5 text-[10px] font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                              ⏱ {duration}
+                              ⏱ {timing}
                             </span>
                           )}
                         </div>
@@ -923,14 +1066,23 @@ export default function MicrocredentialTopicList() {
 
                         <div className="mt-3 flex flex-wrap items-center gap-2 pl-8 text-xs">
                           {videoUrl && (
-                            <a
-                              href={videoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveVideoModal({
+                                  title,
+                                  url: videoUrl,
+                                  timing,
+                                  topicName: topic.topicName,
+                                  moduleName: currentActiveModuleName,
+                                  courseName:
+                                    topicModalCourse?.microcredentialCourseName || "",
+                                })
+                              }
+                              className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 active:scale-95 transition cursor-pointer dark:bg-blue-950/40 dark:text-blue-300"
                             >
                               <span>▶ Watch Video</span>
-                            </a>
+                            </button>
                           )}
 
                           {docPath && (
@@ -964,10 +1116,10 @@ export default function MicrocredentialTopicList() {
                     <FileIcon className="size-6" />
                   </div>
                   <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                    No topics found for this course.
+                    No topics found for this module.
                   </p>
                   <p className="text-[11px] text-gray-400 mt-0.5">
-                    Topics can be added during course content setup.
+                    Topics can be added during module content setup.
                   </p>
                 </div>
               )}
@@ -979,6 +1131,9 @@ export default function MicrocredentialTopicList() {
                 onClick={() => {
                   setTopicModalCourse(null);
                   setTopicList([]);
+                  setCourseModules([]);
+                  setSelectedModuleId(null);
+                  setActiveVideoModal(null);
                 }}
                 className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
               >
@@ -1262,8 +1417,180 @@ export default function MicrocredentialTopicList() {
           </div>
         </div>
       )}
+
+      {/* ===================================================================== */}
+      {/* 5. WATCH VIDEO MODAL (Opens video in modal on the same tab) */}
+      {/* ===================================================================== */}
+      {activeVideoModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-xs animate-fadeIn">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0"
+            onClick={() => setActiveVideoModal(null)}
+          />
+
+          <div className="relative z-10 w-full max-w-3xl rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+              <div className="min-w-0 flex-1 pr-4">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {activeVideoModal.courseName && (
+                    <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 truncate max-w-xs">
+                      {activeVideoModal.courseName}
+                    </span>
+                  )}
+                  {activeVideoModal.moduleName && (
+                    <span className="rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                      Module: {activeVideoModal.moduleName}
+                    </span>
+                  )}
+                  {activeVideoModal.timing && (
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                      ⏱ {activeVideoModal.timing}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white mt-1.5 truncate">
+                  {activeVideoModal.title}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveVideoModal(null)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white cursor-pointer"
+                title="Close"
+              >
+                <CloseIcon className="size-5" />
+              </button>
+            </div>
+
+            {/* Video Player Box */}
+            <div className="mt-4">
+              {(() => {
+                const videoInfo = getEmbedVideoInfo(activeVideoModal.url);
+                if (!videoInfo || !videoInfo.src) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        No valid video URL found for this topic.
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (videoInfo.type === "video") {
+                  return (
+                    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-inner">
+                      <video
+                        controls
+                        autoPlay
+                        playsInline
+                        src={videoInfo.src}
+                        className="h-full w-full object-contain"
+                      >
+                        Your browser does not support HTML5 video.
+                      </video>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-inner">
+                    <iframe
+                      src={videoInfo.src}
+                      title={activeVideoModal.title || "Video player"}
+                      className="h-full w-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 dark:border-gray-800">
+              <a
+                href={activeVideoModal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400"
+              >
+                <span>Open in external tab</span>
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setActiveVideoModal(null)}
+                className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 cursor-pointer"
+              >
+                Close Video
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+/**
+ * Resolves a video URL (YouTube, Vimeo, direct video file, or iframe) into embeddable format
+ */
+function getEmbedVideoInfo(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  // 1. YouTube (watch?v=, youtu.be/, embed/, shorts/)
+  const ytMatch = trimmed.match(
+    /(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|v\/))([a-zA-Z0-9_-]{11})/
+  );
+  if (ytMatch && ytMatch[1]) {
+    return {
+      type: "youtube",
+      src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`,
+    };
+  }
+
+  // 2. Vimeo (vimeo.com/ID or player.vimeo.com/video/ID)
+  const vimeoMatch = trimmed.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return {
+      type: "vimeo",
+      src: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`,
+    };
+  }
+
+  // 3. Direct video file (.mp4, .webm, .ogg, .mov, etc.)
+  const isDirectVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(trimmed);
+  const resolvedUrl =
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:")
+      ? trimmed
+      : formatImageUrl(trimmed);
+
+  if (isDirectVideo) {
+    return {
+      type: "video",
+      src: resolvedUrl,
+    };
+  }
+
+  // 4. Default iframe fallback
+  return {
+    type: "iframe",
+    src: resolvedUrl,
+  };
 }
 
 function BookIcon(props) {

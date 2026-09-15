@@ -97,7 +97,7 @@ export default function TestimonialList({
       const timer = setTimeout(() => setSuccessMessage(""), 4500);
       try {
         window.history.replaceState({}, document.title);
-      } catch {}
+      } catch { }
       return () => clearTimeout(timer);
     }
   }, [location.state]);
@@ -473,7 +473,7 @@ export default function TestimonialList({
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   e.target.onerror = null;
-                                  e.target.src = "/Ignitoverse_Logo.png";
+                                  e.target.src = "/Ignitoverse Logonew.png";
                                 }}
                               />
                             ) : (

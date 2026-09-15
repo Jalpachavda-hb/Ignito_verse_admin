@@ -72,6 +72,8 @@ import { buildGetMicrocredentialStudentReviewListInput } from '../dto/input/getM
 import { parseGetMicrocredentialStudentReviewListOutput, parseGetMicrocredentialStudentReviewListErrorOutput } from '../dto/output/getMicrocredentialStudentReviewListOutput';
 import { buildDeleteMicrocredentialStudentReviewInput } from '../dto/input/deleteMicrocredentialStudentReviewInput';
 import { parseDeleteMicrocredentialStudentReviewOutput, parseDeleteMicrocredentialStudentReviewErrorOutput } from '../dto/output/deleteMicrocredentialStudentReviewOutput';
+import { buildGetMicrocredentialTopicByModuleIdInput } from '../dto/input/getMicrocredentialTopicByModuleIdInput';
+import { parseGetMicrocredentialTopicByModuleIdOutput, parseGetMicrocredentialTopicByModuleIdErrorOutput } from '../dto/output/getMicrocredentialTopicByModuleIdOutput';
 
 /**
  * Uploads one or more files using multipart/form-data.
@@ -1428,6 +1430,34 @@ export async function getMicrocredentialModuleByCourseId(microcredentialCourseId
     } catch (error) {
         console.error('Error in getMicrocredentialModuleByCourseId:', error);
         return parseGetMicrocredentialModuleByCourseIdErrorOutput({ message: error.message }, 500);
+    }
+}
+
+/**
+ * Get Topics By Module ID (Used for module-wise topic view)
+ * API: POST /api/IgnitoMicroCredencialAPI/GetMicrocredentialTopicByModuleId
+ * 
+ * @param {number} microcredentialModuleMasterId
+ * @returns {Promise<object>} Result DTO `{ success, microcredentialTopicList, ... }`
+ */
+export async function getMicrocredentialTopicByModuleId(microcredentialModuleMasterId = 0) {
+    try {
+        const inputDto = buildGetMicrocredentialTopicByModuleIdInput(microcredentialModuleMasterId);
+        const response = await apiClient('api/IgnitoMicroCredencialAPI/GetMicrocredentialTopicByModuleId', {
+            method: 'POST',
+            headers: inputDto.headers,
+            body: inputDto.body
+        });
+
+        if (!response.ok && response.status !== 200) {
+            return parseGetMicrocredentialTopicByModuleIdErrorOutput(response.data, response.status);
+        }
+
+        const outputDto = parseGetMicrocredentialTopicByModuleIdOutput(response.data, response.status);
+        return outputDto;
+    } catch (error) {
+        console.error('Error in getMicrocredentialTopicByModuleId:', error);
+        return parseGetMicrocredentialTopicByModuleIdErrorOutput({ message: error.message }, 500);
     }
 }
 

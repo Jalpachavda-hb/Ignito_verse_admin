@@ -43,8 +43,8 @@ export default function AddEditMicrocredentialModule() {
     location.state?.courseId
       ? String(location.state.courseId)
       : location.state?.item?.microcredentialCourseId
-      ? String(location.state.item.microcredentialCourseId)
-      : ""
+        ? String(location.state.item.microcredentialCourseId)
+        : ""
   );
 
   // Module items state (in edit mode, exactly 1; in add mode, can add multiple)
@@ -183,12 +183,12 @@ export default function AddEditMicrocredentialModule() {
       prev.map((mod, i) =>
         i === index
           ? {
-              ...mod,
-              bannerFile: file,
-              bannerPreviewUrl: localUrl,
-              uploadingBanner: true,
-              bannerUploaded: false,
-            }
+            ...mod,
+            bannerFile: file,
+            bannerPreviewUrl: localUrl,
+            uploadingBanner: true,
+            bannerUploaded: false,
+          }
           : mod
       )
     );
@@ -224,13 +224,13 @@ export default function AddEditMicrocredentialModule() {
           prev.map((mod, i) =>
             i === index
               ? {
-                  ...mod,
-                  moduleBannerImage: serverPath,
-                  // Retain the local blob URL for instant preview without 404 network errors
-                  bannerPreviewUrl: localUrl,
-                  uploadingBanner: false,
-                  bannerUploaded: true,
-                }
+                ...mod,
+                moduleBannerImage: serverPath,
+                // Retain the local blob URL for instant preview without 404 network errors
+                bannerPreviewUrl: localUrl,
+                uploadingBanner: false,
+                bannerUploaded: true,
+              }
               : mod
           )
         );
@@ -239,11 +239,11 @@ export default function AddEditMicrocredentialModule() {
           prev.map((mod, i) =>
             i === index
               ? {
-                  ...mod,
-                  bannerPreviewUrl: localUrl,
-                  uploadingBanner: false,
-                  bannerUploaded: false,
-                }
+                ...mod,
+                bannerPreviewUrl: localUrl,
+                uploadingBanner: false,
+                bannerUploaded: false,
+              }
               : mod
           )
         );
@@ -254,11 +254,11 @@ export default function AddEditMicrocredentialModule() {
         prev.map((mod, i) =>
           i === index
             ? {
-                ...mod,
-                bannerPreviewUrl: localUrl,
-                uploadingBanner: false,
-                bannerUploaded: false,
-              }
+              ...mod,
+              bannerPreviewUrl: localUrl,
+              uploadingBanner: false,
+              bannerUploaded: false,
+            }
             : mod
         )
       );
@@ -271,12 +271,12 @@ export default function AddEditMicrocredentialModule() {
       prev.map((mod, i) =>
         i === index
           ? {
-              ...mod,
-              bannerFile: null,
-              bannerPreviewUrl: "",
-              moduleBannerImage: "",
-              bannerUploaded: false,
-            }
+            ...mod,
+            bannerFile: null,
+            bannerPreviewUrl: "",
+            moduleBannerImage: "",
+            bannerUploaded: false,
+          }
           : mod
       )
     );
@@ -513,8 +513,8 @@ export default function AddEditMicrocredentialModule() {
                   {loadingCourses
                     ? "Loading courses..."
                     : selectedStreamId
-                    ? "-- Select Microcredential Course --"
-                    : "-- Select Stream First or Enter Course ID --"}
+                      ? "-- Select Microcredential Course --"
+                      : "-- Select Stream First or Enter Course ID --"}
                 </option>
                 {courseList.map((c) => (
                   <option
@@ -642,7 +642,7 @@ export default function AddEditMicrocredentialModule() {
                         onError={(e) => {
                           e.target.onerror = null;
                           if (!mod.bannerFile) {
-                            e.target.src = "/Ignitoverse_Logo.png";
+                            e.target.src = "/Ignitoverse Logonew.png";
                           }
                         }}
                       />

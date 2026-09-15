@@ -430,16 +430,14 @@ export default function MicrocredentialCourse() {
 
     return (
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-          isActive
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${isActive
             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
             : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-        }`}
+          }`}
       >
         <span
-          className={`size-1.5 rounded-full ${
-            isActive ? "bg-emerald-500" : "bg-gray-400"
-          }`}
+          className={`size-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-gray-400"
+            }`}
         />
         {status || (isActive ? "Active" : "Inactive")}
       </span>
@@ -696,7 +694,7 @@ export default function MicrocredentialCourse() {
                 </TableCell>
 
                 {/* 4. About Course */}
-               
+
 
                 {/* 9. Level & Lang */}
                 <TableCell
@@ -737,7 +735,7 @@ export default function MicrocredentialCourse() {
                 >
                   Status
                 </TableCell>
-                 <TableCell
+                <TableCell
                   isHeader
                   className="w-28 px-3 py-3.5 text-center text-theme-xs font-semibold text-gray-700 dark:text-gray-300"
                 >
@@ -858,7 +856,7 @@ export default function MicrocredentialCourse() {
                               className="size-11 shrink-0 rounded-lg border border-gray-200 object-cover p-0.5 shadow-xs dark:border-gray-700"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse_Logo.png";
+                                e.target.src = "/Ignitoverse Logonew.png";
                               }}
                             />
                           ) : (
@@ -906,7 +904,7 @@ export default function MicrocredentialCourse() {
                       </TableCell>
 
                       {/* 4. About Course (Blue circular eye icon button) */}
-                      
+
                       {/* 9. Level & Language */}
                       <TableCell className="px-3 py-4">
                         <div className="flex flex-col gap-1">
@@ -1095,11 +1093,10 @@ export default function MicrocredentialCourse() {
                       key={pageNum}
                       type="button"
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                        isActive
+                      className={`min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive
                           ? "bg-brand-500 text-white shadow-xs"
                           : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -1329,7 +1326,7 @@ export default function MicrocredentialCourse() {
                     className="max-h-72 max-w-full rounded-xl border border-gray-200 object-contain shadow-xs dark:border-gray-700"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/Ignitoverse_Logo.png";
+                      e.target.src = "/Ignitoverse Logonew.png";
                     }}
                   />
                   {activeModalCourse.certificateName && (

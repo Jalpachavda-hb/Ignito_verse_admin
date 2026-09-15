@@ -25,7 +25,7 @@ import {
 import { getHomeTrustedLogoList } from "../../services/homepageService";
 import { formatImageUrl } from "../../dto/output/trustedByLogoOutputs";
 
-export default function LogoList({ initialData = null, onDelete = () => {} } = {}) {
+export default function LogoList({ initialData = null, onDelete = () => { } } = {}) {
   // State management
   const [logos, setLogos] = useState(initialData || []);
   const [loading, setLoading] = useState(false);
@@ -587,7 +587,7 @@ export default function LogoList({ initialData = null, onDelete = () => {} } = {
                               className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-105"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse_Logo.png";
+                                e.target.src = "/Ignitoverse Logonew.png";
                               }}
                             />
                           ) : (
@@ -731,8 +731,8 @@ export default function LogoList({ initialData = null, onDelete = () => {} } = {
                       type="button"
                       onClick={() => setCurrentPage(pageNum)}
                       className={`min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive
-                          ? "bg-brand-500 text-white shadow-xs"
-                          : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        ? "bg-brand-500 text-white shadow-xs"
+                        : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                         }`}
                     >
                       {pageNum}
@@ -944,7 +944,7 @@ export default function LogoList({ initialData = null, onDelete = () => {} } = {
                       className="max-h-56 max-w-full object-contain"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "/Ignitoverse_Logo.png";
+                        e.target.src = "/Ignitoverse Logonew.png";
                       }}
                     />
                   ))}
@@ -956,7 +956,7 @@ export default function LogoList({ initialData = null, onDelete = () => {} } = {
                   className="max-h-56 max-w-full object-contain"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = "/Ignitoverse_Logo.png";
+                    e.target.src = "/Ignitoverse Logonew.png";
                   }}
                 />
               )}
