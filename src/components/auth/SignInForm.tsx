@@ -168,14 +168,14 @@ export default function SignInForm() {
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => setShowPassword((prev) => !prev)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none cursor-pointer"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none cursor-pointer z-10"
             >
               {showPassword ? (
-                <EyeIcon className="size-4" />
+                <EyeIcon className="size-5 fill-current" />
               ) : (
-                <EyeCloseIcon className="size-4" />
+                <EyeCloseIcon className="size-5 fill-current" />
               )}
             </button>
           </div>

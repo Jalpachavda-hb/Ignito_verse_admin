@@ -16,24 +16,21 @@ import {
   AlertIcon,
   EyeIcon,
   PencilIcon,
-  AngleLeftIcon,
-  AngleRightIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  FolderIcon,
 } from "../../icons";
 import {
-  microcredentialModuleMasterList,
-  microcredentialModuleMasterDelete,
+  microCourseTopicList,
   logJsError,
 } from "../../services/adminMicrocredentialService";
-import { formatImageUrl } from "../../dto/output/homepageOutputs";
 
 export default function MicrocredentialModuleList() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Data & loading states
-  const [moduleList, setModuleList] = useState([]);
+  // Course data & loading states
+  const [courseList, setCourseList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(
@@ -46,13 +43,8 @@ export default function MicrocredentialModuleList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [orderByColumn, setOrderByColumn] = useState("UpdatedOn");
+  const [orderByColumn, setOrderByColumn] = useState("MicrocredentialCourseId");
   const [orderByDirection, setOrderByDirection] = useState("DESC");
-
-  // Modals state
-  const [previewImage, setPreviewImage] = useState(null);
-  const [deleteModalItem, setDeleteModalItem] = useState(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -71,43 +63,52 @@ export default function MicrocredentialModuleList() {
     }
   }, [successMessage]);
 
-  // Fetch Module List
-  const fetchModules = useCallback(async () => {
+  // Fetch Course List using MicroCourseTopicList API
+  const fetchCourses = useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
 
     try {
-      const response = await microcredentialModuleMasterList(
+      const response = await microCourseTopicList(
         currentPage,
         pageSize,
         orderByColumn,
         orderByDirection,
-        debouncedSearch,
-        1
+        0,
+        1,
+        debouncedSearch
       );
 
       if (response && response.success !== false) {
-        const list = response.microcredentialModuleMasterList || [];
-        setModuleList(list);
-        setTotalRecords(response.pageDetail?.totalRecords ?? list.length);
+        const list =
+          response.microCourseTopicList ||
+          response.MicroCourseTopicList ||
+          response.data ||
+          [];
+        setCourseList(Array.isArray(list) ? list : []);
+        setTotalRecords(
+          response.pageDetail?.totalRecords ??
+          response.totalRecords ??
+          list.length
+        );
       } else {
-        const msg = response?.message || "Failed to load module list.";
+        const msg = response?.message || "Failed to load course list.";
         setErrorMessage(msg);
-        logJsError(msg, "", "MicrocredentialModuleList.jsx fetchModules");
+        logJsError(msg, "", "MicrocredentialModuleList.jsx fetchCourses");
       }
     } catch (err) {
-      console.error("Error in fetchModules:", err);
-      const msg = err.message || "An unexpected error occurred while fetching modules.";
+      console.error("Error in fetchCourses:", err);
+      const msg = err.message || "An unexpected error occurred while fetching courses.";
       setErrorMessage(msg);
-      logJsError(msg, err.stack, "MicrocredentialModuleList.jsx fetchModules");
+      logJsError(msg, err.stack, "MicrocredentialModuleList.jsx fetchCourses");
     } finally {
       setLoading(false);
     }
   }, [currentPage, pageSize, orderByColumn, orderByDirection, debouncedSearch]);
 
   useEffect(() => {
-    fetchModules();
-  }, [fetchModules]);
+    fetchCourses();
+  }, [fetchCourses]);
 
   // Handle Sort
   const handleSort = (column) => {
@@ -120,60 +121,30 @@ export default function MicrocredentialModuleList() {
     setCurrentPage(1);
   };
 
-  // Delete Module
-  const handleDeleteConfirm = async () => {
-    if (!deleteModalItem) return;
-    setDeleting(true);
-
-    try {
-      const response = await microcredentialModuleMasterDelete(
-        deleteModalItem.microcredentialModuleMasterId,
-        1
-      );
-
-      if (response && response.success !== false) {
-        setSuccessMessage(response.message || "Module deleted successfully.");
-        setDeleteModalItem(null);
-        fetchModules();
-      } else {
-        const msg = response?.message || "Failed to delete module.";
-        setErrorMessage(msg);
-        logJsError(msg, "", "MicrocredentialModuleList.jsx handleDeleteConfirm");
-      }
-    } catch (err) {
-      console.error("Error deleting module:", err);
-      const msg = err.message || "An unexpected error occurred.";
-      setErrorMessage(msg);
-      logJsError(msg, err.stack, "MicrocredentialModuleList.jsx handleDeleteConfirm");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endRecord = Math.min(currentPage * pageSize, totalRecords);
+  const currentSafePage = Math.min(currentPage, totalPages);
 
-  const visiblePages = useMemo(() => {
-    const pages = [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1);
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "—";
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
     }
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
-  }, [currentPage, totalPages]);
+  };
 
   return (
     <>
       <PageMeta
         title="Microcredential Module List | IgnitoVerse Admin"
-        description="Manage microcredential course modules, descriptions, and learning outcomes."
+        description="Select a course to view, manage, and add its modules and topics."
       />
       <PageBreadcrumb pageTitle="Microcredential Module List" />
 
@@ -208,67 +179,109 @@ export default function MicrocredentialModuleList() {
         </div>
       )}
 
+      {/* Instruction Card */}
+      <div className="mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-blue-800 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-300">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs">
+            ℹ
+          </span>
+          <div>
+            <span className="font-semibold text-sm block">Course Modules Directory</span>
+            <span className="text-blue-700/80 dark:text-blue-300/80">
+              Click <strong>"View Modules"</strong> on any course below to open its dedicated modules page.
+            </span>
+          </div>
+        </div>
+
+        <Link
+          to="/microcredential/module-add"
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 active:scale-95 transition whitespace-nowrap"
+        >
+          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>+ Add Module</span>
+        </Link>
+      </div>
+
       {/* Main Container */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
-        {/* Top Actions: Search + Add Button */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-          <div className="w-full sm:w-72">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        {/* Top Actions: Search + Entries */}
+        <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="w-full sm:w-80">
             <input
               type="text"
-              placeholder="Search module or course..."
+              placeholder="Search course or stream..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 transition-all"
             />
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Link
-              to="/microcredential/module-add"
-              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-[#1D64F2] hover:bg-[#1855D1] rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="cursor-pointer rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
             >
-              <span>+ Add Module</span>
-            </Link>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>entries</span>
+
+            <button
+              type="button"
+              onClick={fetchCourses}
+              disabled={loading}
+              className="ml-2 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              title="Refresh courses"
+            >
+              {loading ? "..." : "Refresh"}
+            </button>
           </div>
         </div>
 
-        {/* Entries Dropdown */}
-        <div className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-300">
-          <span>Show</span>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setCurrentPage(1);
-            }}
-            className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-          <span>entries</span>
-        </div>
-
-        {/* Modules Table */}
+        {/* Courses Table */}
         <div className="overflow-x-auto">
           <Table className="w-full">
             <TableHeader className="border-b border-gray-200 dark:border-gray-800">
-              <TableRow className="hover:bg-transparent">
-                <TableCell isHeader className="py-3 px-4 text-center font-semibold text-gray-900 dark:text-gray-100 text-sm w-16">
+              <TableRow className="bg-gray-50/70 hover:bg-transparent dark:bg-white/[0.02]">
+                <TableCell isHeader className="w-16 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Sr No
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="py-3 px-4 text-left font-semibold text-gray-900 dark:text-gray-100 text-sm cursor-pointer select-none"
+                  className="min-w-[200px] cursor-pointer select-none px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
+                  onClick={() => handleSort("StreamName")}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Stream</span>
+                    <span className="text-gray-400">
+                      {orderByColumn === "StreamName" ? (
+                        orderByDirection === "ASC" ? <ChevronUpIcon className="inline size-3.5" /> : <ChevronDownIcon className="inline size-3.5" />
+                      ) : (
+                        "▾"
+                      )}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell
+                  isHeader
+                  className="min-w-[280px] cursor-pointer select-none px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100"
                   onClick={() => handleSort("MicrocredentialCourseName")}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Course Name</span>
                     <span className="text-gray-400">
                       {orderByColumn === "MicrocredentialCourseName" ? (
-                        orderByDirection === "ASC" ? <ChevronUpIcon className="size-3.5 inline" /> : <ChevronDownIcon className="size-3.5 inline" />
+                        orderByDirection === "ASC" ? <ChevronUpIcon className="inline size-3.5" /> : <ChevronDownIcon className="inline size-3.5" />
                       ) : (
                         "▾"
                       )}
@@ -277,43 +290,21 @@ export default function MicrocredentialModuleList() {
                 </TableCell>
                 <TableCell
                   isHeader
-                  className="py-3 px-4 text-left font-semibold text-gray-900 dark:text-gray-100 text-sm cursor-pointer select-none"
-                  onClick={() => handleSort("ModuleName")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Module Name</span>
-                    <span className="text-gray-400">
-                      {orderByColumn === "ModuleName" ? (
-                        orderByDirection === "ASC" ? <ChevronUpIcon className="size-3.5 inline" /> : <ChevronDownIcon className="size-3.5 inline" />
-                      ) : (
-                        "▾"
-                      )}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell isHeader className="py-3 px-4 text-center font-semibold text-gray-900 dark:text-gray-100 text-sm w-24">
-                  Banner
-                </TableCell>
-                <TableCell isHeader className="py-3 px-4 text-left font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                  Description
-                </TableCell>
-                <TableCell
-                  isHeader
-                  className="py-3 px-4 text-left font-semibold text-gray-900 dark:text-gray-100 text-sm cursor-pointer select-none whitespace-nowrap"
+                  className="w-36 cursor-pointer select-none px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
                   onClick={() => handleSort("UpdatedOn")}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Updated On</span>
                     <span className="text-gray-400">
                       {orderByColumn === "UpdatedOn" ? (
-                        orderByDirection === "ASC" ? <ChevronUpIcon className="size-3.5 inline" /> : <ChevronDownIcon className="size-3.5 inline" />
+                        orderByDirection === "ASC" ? <ChevronUpIcon className="inline size-3.5" /> : <ChevronDownIcon className="inline size-3.5" />
                       ) : (
                         "▾"
                       )}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell isHeader className="py-3 px-4 text-center font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
+                <TableCell isHeader className="w-48 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                   Actions
                 </TableCell>
               </TableRow>
@@ -322,113 +313,102 @@ export default function MicrocredentialModuleList() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-gray-500">
+                  <TableCell colSpan={5} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm">Loading modules...</span>
+                      <div className="size-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                      <span className="text-sm">Loading courses...</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : moduleList.length === 0 ? (
+              ) : courseList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
-                    No modules found. Click "+ Add Module" to create the first module.
+                  <TableCell colSpan={5} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    No courses found.
                   </TableCell>
                 </TableRow>
               ) : (
-                moduleList.map((item, index) => {
-                  const bannerUrl = item.moduleBannerImage ? formatImageUrl(item.moduleBannerImage) : "";
-                  const serialNo = (currentPage - 1) * pageSize + index + 1;
+                courseList.map((item, index) => {
+                  const serialNo = (currentSafePage - 1) * pageSize + index + 1;
+                  const courseId = Number(
+                    item.microcredentialCourseId ||
+                    item.MicrocredentialCourseId ||
+                    0
+                  );
 
                   return (
                     <TableRow
-                      key={item.microcredentialModuleMasterId || index}
-                      className="border-b border-gray-100 dark:border-gray-800/60 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
+                      key={courseId || index}
+                      className="border-b border-gray-100 transition-colors hover:bg-gray-50/50 dark:border-gray-800/60 dark:hover:bg-gray-800/30"
                     >
-                      <TableCell className="py-4 px-4 text-center text-sm font-medium text-gray-500">
+                      {/* 1. Sr No */}
+                      <TableCell className="px-4 py-4 text-center text-sm font-medium text-gray-500">
                         {serialNo}
                       </TableCell>
 
-                      <TableCell className="py-4 px-4 text-sm font-semibold text-gray-800 dark:text-gray-200 max-w-xs">
-                        {item.microcredentialCourseName || `Course #${item.microcredentialCourseId}`}
+                      {/* 2. Stream Name */}
+                      <TableCell className="px-4 py-4 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span className="inline-block rounded-md bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                          {item.streamName || "General"}
+                        </span>
                       </TableCell>
 
-                      <TableCell className="py-4 px-4 text-sm text-gray-800 dark:text-gray-100 font-medium max-w-xs">
-                        {item.moduleName}
+                      {/* 3. Course Name */}
+                      <TableCell className="px-4 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        <div className="font-semibold text-gray-900 dark:text-white">
+                          {item.microcredentialCourseName || `Course #${courseId}`}
+                        </div>
+                        <span className="text-[11px] text-gray-400">
+                          Course ID: {courseId}
+                        </span>
                       </TableCell>
 
-                      <TableCell className="py-4 px-4 text-center">
-                        {bannerUrl ? (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewImage(bannerUrl)}
-                            className="size-10 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 inline-flex items-center justify-center hover:opacity-80 transition-opacity"
-                            title="Click to view full banner"
-                          >
-                            <img
-                              src={bannerUrl}
-                              alt={item.moduleName}
-                              className="size-full object-cover"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/Ignitoverse Logonew.png";
-                              }}
-                            />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
+                      {/* 4. Updated On */}
+                      <TableCell className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        {formatDateTime(item.updatedOn)}
                       </TableCell>
 
-                      <TableCell className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-sm line-clamp-2">
-                        {item.moduleDescription || "-"}
-                      </TableCell>
-
-                      <TableCell className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {item.updatedOn || "-"}
-                      </TableCell>
-
-                      <TableCell className="py-4 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Add Topics directly for this module */}
+                      {/* 5. Actions: View Modules (Opens New Page!) */}
+                      <TableCell className="px-4 py-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* View Modules Button (Opens dedicated new page) */}
                           <button
                             type="button"
                             onClick={() =>
-                              navigate("/microcredential/topic-add", {
+                              navigate(`/microcredential/course-modules/${courseId}`, {
                                 state: {
-                                  courseId: item.microcredentialCourseId,
-                                  moduleId: item.microcredentialModuleMasterId,
+                                  courseId,
+                                  courseName: item.microcredentialCourseName,
+                                  streamName: item.streamName,
+                                  streamId: item.streamId,
+                                  item,
                                 },
                               })
                             }
-                            title="Add Topics to this Module"
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors text-xs font-medium"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-xs hover:border-blue-300 hover:bg-blue-100 active:scale-95 transition dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/60"
+                            title="View Modules for this Course in New Page"
                           >
-                            + Topic
+                            <FolderIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
+                            <span>View Modules</span>
                           </button>
 
-                          {/* Edit Module */}
+                          {/* Quick + Add Module */}
                           <button
                             type="button"
                             onClick={() =>
-                              navigate(`/microcredential/module-edit/${item.microcredentialModuleMasterId}`, {
-                                state: { item },
+                              navigate("/microcredential/module-add", {
+                                state: {
+                                  courseId,
+                                  courseName: item.microcredentialCourseName,
+                                  streamName: item.streamName,
+                                  streamId: item.streamId,
+                                  isCourseLocked: true,
+                                },
                               })
                             }
-                            title="Edit Module"
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                            title="Add Module to this Course"
+                            className="rounded-lg p-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
                           >
-                            <PencilIcon className="size-4" />
-                          </button>
-
-                          {/* Delete Module */}
-                          <button
-                            type="button"
-                            onClick={() => setDeleteModalItem(item)}
-                            title="Delete Module"
-                            className="p-1.5 rounded-lg text-gray-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                          >
-                            <TrashBinIcon className="size-4" />
+                            + Add Module
                           </button>
                         </div>
                       </TableCell>
@@ -440,128 +420,38 @@ export default function MicrocredentialModuleList() {
           </Table>
         </div>
 
-        {/* Footer: Showing entries + Pagination */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 text-sm">
-          <div className="text-gray-500 dark:text-gray-400">
-            Showing {startRecord} to {endRecord} of {totalRecords} entries
-          </div>
+        {/* Footer Pagination */}
+        {courseList.length > 0 && (
+          <div className="mt-4 flex flex-col items-center justify-between gap-3 border-t border-gray-100 pt-4 sm:flex-row dark:border-gray-800">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Showing {(currentSafePage - 1) * pageSize + 1} to{" "}
+              {Math.min(currentSafePage * pageSize, totalRecords)} of {totalRecords} entries
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-md border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              title="Previous Page"
-            >
-              <AngleLeftIcon className="size-4" />
-            </button>
-
-            {visiblePages.map((pageNum) => (
+            <div className="flex items-center gap-1">
               <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`min-w-8 h-8 px-2.5 rounded-md text-sm font-medium transition-all ${currentPage === pageNum
-                    ? "bg-[#e11d48] text-white shadow-sm"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  }`}
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentSafePage === 1}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               >
-                {pageNum}
+                Previous
               </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-1.5 rounded-md border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              title="Next Page"
-            >
-              <AngleRightIcon className="size-4" />
-            </button>
+              <span className="px-2 text-xs font-medium text-gray-700 dark:text-gray-200">
+                Page {currentSafePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentSafePage === totalPages}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              >
+                Next
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {/* BANNER IMAGE PREVIEW MODAL */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div
-            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-2xl max-h-[85vh] p-4 overflow-hidden border border-gray-200 dark:border-gray-800"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/40 text-white hover:bg-black/60 transition-colors z-10"
-            >
-              <CloseIcon className="size-5" />
-            </button>
-            <img
-              src={previewImage}
-              alt="Module Banner"
-              className="max-h-[75vh] w-auto mx-auto object-contain rounded-lg"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/Ignitoverse Logonew.png";
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM DELETE MODAL */}
-      {deleteModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center gap-3 text-red-600 mb-4">
-              <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-full">
-                <TrashBinIcon className="size-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Delete Module
-              </h3>
-            </div>
-
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-              Are you sure you want to delete this module?
-            </p>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg text-xs text-gray-800 dark:text-gray-200 font-semibold mb-2">
-              {deleteModalItem.moduleName}
-            </div>
-            <p className="text-xs text-red-500 mb-6">
-              This action will soft-delete the module and deactivate all its associated topics.
-            </p>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteModalItem(null)}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                disabled={deleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <span>Delete</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

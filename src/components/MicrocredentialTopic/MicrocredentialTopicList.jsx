@@ -759,13 +759,28 @@ export default function MicrocredentialTopicList() {
                         )}
                       </TableCell>
 
-                      {/* 4. Topic (Blue circular eye view button) */}
+                      {/* 4. Topic (Blue circular eye view button - Opens Course Modules Page) */}
                       <TableCell className="px-3 py-4 text-center">
                         <button
                           type="button"
-                          onClick={() => handleOpenTopics(item)}
+                          onClick={() => {
+                            const cId = Number(
+                              item.microcredentialCourseId ||
+                              item.MicrocredentialCourseId ||
+                              0
+                            );
+                            navigate(`/microcredential/course-modules/${cId}`, {
+                              state: {
+                                courseId: cId,
+                                courseName: item.microcredentialCourseName,
+                                streamName: item.streamName,
+                                streamId: item.streamId,
+                                item,
+                              },
+                            });
+                          }}
                           className="inline-flex size-7 items-center justify-center rounded-full bg-blue-500 text-white shadow-xs hover:bg-blue-600 active:scale-95 transition-all"
-                          title="View Course Topics"
+                          title="View Course Modules & Topics in New Page"
                         >
                           <EyeIcon className="size-3.5 fill-white text-white" />
                         </button>

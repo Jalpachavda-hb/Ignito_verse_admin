@@ -33,19 +33,24 @@ export default function AddMicrocredentialCourseTopic() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Passed context flags
+  const passedCourseId = location.state?.courseId ? String(location.state.courseId) : "";
+  const passedCourseName = location.state?.courseName || "";
+  const passedStreamId = location.state?.streamId ? String(location.state.streamId) : "";
+  const passedStreamName = location.state?.streamName || "";
+  const passedModuleId = location.state?.moduleId ? String(location.state.moduleId) : "";
+  const passedModuleName = location.state?.moduleName || "";
+
+  const isCourseLocked = Boolean(passedCourseId || location.state?.isCourseLocked);
+  const isModuleLocked = Boolean(passedModuleId || location.state?.isModuleLocked);
+
   // Dropdown states
   const [streamList, setStreamList] = useState([]);
   const [courseList, setCourseList] = useState([]);
   const [moduleList, setModuleList] = useState([]);
-  const [selectedStreamId, setSelectedStreamId] = useState(
-    location.state?.streamId ? String(location.state.streamId) : ""
-  );
-  const [selectedCourseId, setSelectedCourseId] = useState(
-    location.state?.courseId ? String(location.state.courseId) : ""
-  );
-  const [selectedModuleId, setSelectedModuleId] = useState(
-    location.state?.moduleId ? String(location.state.moduleId) : ""
-  );
+  const [selectedStreamId, setSelectedStreamId] = useState(passedStreamId);
+  const [selectedCourseId, setSelectedCourseId] = useState(passedCourseId);
+  const [selectedModuleId, setSelectedModuleId] = useState(passedModuleId);
   const [loadingModules, setLoadingModules] = useState(false);
 
   // Main Upload Document (Upload Microcredential)
@@ -81,6 +86,18 @@ export default function AddMicrocredentialCourseTopic() {
         if (isMounted && streamRes && streamRes.success) {
           const streams = streamRes.streamDataList || [];
           setStreamList(streams);
+
+          // Auto-resolve stream ID if we only have streamName or streamId was 0
+          if (passedStreamName || (passedStreamId && passedStreamId !== "0")) {
+            const matched = streams.find(
+              (s) =>
+                (passedStreamId && passedStreamId !== "0" && String(s.streamId) === String(passedStreamId)) ||
+                (passedStreamName && s.streamName?.toLowerCase().trim() === passedStreamName.toLowerCase().trim())
+            );
+            if (matched && matched.streamId) {
+              setSelectedStreamId(String(matched.streamId));
+            }
+          }
         }
       } catch (err) {
         console.error("Error loading stream list:", err);
@@ -94,7 +111,85 @@ export default function AddMicrocredentialCourseTopic() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [passedStreamName, passedStreamId]);
+
+  // Automatically load courses & modules when pre-selected via navigation state
+  useEffect(() => {
+    let isMounted = true;
+    async function loadInitialState() {
+      const initialCourseId = passedCourseId;
+      const initialStreamId = passedStreamId;
+      const initialModuleId = passedModuleId;
+
+      if (initialStreamId || initialCourseId) {
+        try {
+          const res = await getMicrocredentialCourse(initialStreamId ? String(initialStreamId) : "");
+          if (isMounted && res && res.success) {
+            let courses = res.microcredentialCourseOutputList || [];
+            if (
+              initialCourseId &&
+              passedCourseName &&
+              !courses.some((c) => String(c.microcredentialCourseId) === String(initialCourseId))
+            ) {
+              courses = [
+                {
+                  microcredentialCourseId: Number(initialCourseId),
+                  microcredentialCourseName: passedCourseName,
+                  streamId: Number(initialStreamId || 0),
+                },
+                ...courses,
+              ];
+            }
+            setCourseList(courses);
+            if (!initialStreamId && initialCourseId) {
+              const matched = courses.find(
+                (c) => String(c.microcredentialCourseId) === String(initialCourseId)
+              );
+              if (matched && matched.streamId) {
+                setSelectedStreamId(String(matched.streamId));
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error loading courses for initial state:", err);
+        }
+      }
+
+      if (initialCourseId) {
+        setLoadingModules(true);
+        try {
+          const modRes = await getMicrocredentialModuleByCourseId(Number(initialCourseId));
+          if (isMounted && modRes && modRes.success) {
+            let mods = modRes.microcredentialModuleList || [];
+            if (
+              initialModuleId &&
+              passedModuleName &&
+              !mods.some((m) => String(m.microcredentialModuleMasterId) === String(initialModuleId))
+            ) {
+              mods = [
+                {
+                  microcredentialModuleMasterId: Number(initialModuleId),
+                  moduleName: passedModuleName,
+                  microcredentialCourseId: Number(initialCourseId),
+                },
+                ...mods,
+              ];
+            }
+            setModuleList(mods);
+          }
+        } catch (err) {
+          console.error("Error loading modules for initial state:", err);
+        } finally {
+          if (isMounted) setLoadingModules(false);
+        }
+      }
+    }
+
+    loadInitialState();
+    return () => {
+      isMounted = false;
+    };
+  }, [passedCourseId, passedStreamId, passedModuleId, passedCourseName, passedModuleName]);
 
   // Stream dropdown change - load microcredential courses for selected stream
   const handleStreamChange = async (e) => {
@@ -715,16 +810,23 @@ export default function AddMicrocredentialCourseTopic() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start pb-6 border-b border-gray-100 dark:border-gray-800">
             {/* Field 1: Select Stream */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Stream <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Select Stream <span className="text-red-500">*</span>
+                </label>
+                {isCourseLocked && (
+                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded">
+                    🔒 Locked
+                  </span>
+                )}
+              </div>
               <select
                 id="ddMicrocredentialCourseStreamId"
                 name="ddMicrocredentialCourseStreamId"
                 value={selectedStreamId}
                 onChange={handleStreamChange}
-                disabled={loadingStreams || saving}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                disabled={isCourseLocked || loadingStreams || saving}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed"
               >
                 <option value="">Select Stream</option>
                 {streamList.map((stream) => (
@@ -735,21 +837,36 @@ export default function AddMicrocredentialCourseTopic() {
                     {stream.streamName || stream.name}
                   </option>
                 ))}
+                {selectedStreamId &&
+                  !streamList.some(
+                    (s) => String(s.streamId || s.id) === String(selectedStreamId)
+                  ) && (
+                    <option value={selectedStreamId}>
+                      {passedStreamName || `Stream #${selectedStreamId}`}
+                    </option>
+                  )}
               </select>
             </div>
 
             {/* Field 2: Select Microcredential Course */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Course <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Select Course <span className="text-red-500">*</span>
+                </label>
+                {isCourseLocked && (
+                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded">
+                    🔒 Locked
+                  </span>
+                )}
+              </div>
               <select
                 id="courseSelect"
                 name="courseSelect"
                 value={selectedCourseId}
                 onChange={handleCourseChange}
-                disabled={!selectedStreamId || loadingCourses || saving}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+                disabled={isCourseLocked || loadingCourses || saving}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {loadingCourses ? "Loading courses..." : "Select Course"}
@@ -762,21 +879,36 @@ export default function AddMicrocredentialCourseTopic() {
                     {c.microcredentialCourseName}
                   </option>
                 ))}
+                {selectedCourseId &&
+                  !courseList.some(
+                    (c) => String(c.microcredentialCourseId) === String(selectedCourseId)
+                  ) && (
+                    <option value={selectedCourseId}>
+                      {passedCourseName || `Course #${selectedCourseId}`}
+                    </option>
+                  )}
               </select>
             </div>
 
             {/* Field 3: Select Module (Microcredential Module Master) */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Select Module {moduleList.length > 0 && <span className="text-red-500">*</span>}
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Select Module {moduleList.length > 0 && <span className="text-red-500">*</span>}
+                </label>
+                {isModuleLocked && (
+                  <span className="text-[10px] text-purple-600 font-medium bg-purple-50 dark:bg-purple-950/40 px-1.5 py-0.5 rounded">
+                    🔒 Locked
+                  </span>
+                )}
+              </div>
               <select
                 id="moduleSelect"
                 name="moduleSelect"
                 value={selectedModuleId}
                 onChange={(e) => setSelectedModuleId(e.target.value)}
-                disabled={!selectedCourseId || loadingModules || saving}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+                disabled={isModuleLocked || loadingModules || saving}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {loadingModules
@@ -795,6 +927,14 @@ export default function AddMicrocredentialCourseTopic() {
                     {m.moduleName}
                   </option>
                 ))}
+                {selectedModuleId &&
+                  !moduleList.some(
+                    (m) => String(m.microcredentialModuleMasterId) === String(selectedModuleId)
+                  ) && (
+                    <option value={selectedModuleId}>
+                      {passedModuleName || `Module #${selectedModuleId}`}
+                    </option>
+                  )}
               </select>
               {selectedCourseId && moduleList.length === 0 && !loadingModules && (
                 <div className="mt-1">

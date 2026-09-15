@@ -33,19 +33,37 @@ export default function AddEditMicrocredentialModule() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Passed context flags
+  const passedCourseId = location.state?.courseId
+    ? String(location.state.courseId)
+    : location.state?.item?.microcredentialCourseId
+    ? String(location.state.item.microcredentialCourseId)
+    : "";
+  const passedCourseName =
+    location.state?.courseName ||
+    location.state?.item?.microcredentialCourseName ||
+    "";
+  const passedStreamName =
+    location.state?.streamName ||
+    location.state?.item?.streamName ||
+    "";
+  const passedStreamId = location.state?.streamId
+    ? String(location.state.streamId)
+    : location.state?.item?.streamId
+    ? String(location.state.item.streamId)
+    : "";
+
+  const isCourseLocked = Boolean(
+    isEditMode ||
+    passedCourseId ||
+    location.state?.isCourseLocked
+  );
+
   // Dropdown states
   const [streamList, setStreamList] = useState([]);
   const [courseList, setCourseList] = useState([]);
-  const [selectedStreamId, setSelectedStreamId] = useState(
-    location.state?.streamId ? String(location.state.streamId) : ""
-  );
-  const [selectedCourseId, setSelectedCourseId] = useState(
-    location.state?.courseId
-      ? String(location.state.courseId)
-      : location.state?.item?.microcredentialCourseId
-        ? String(location.state.item.microcredentialCourseId)
-        : ""
-  );
+  const [selectedStreamId, setSelectedStreamId] = useState(passedStreamId);
+  const [selectedCourseId, setSelectedCourseId] = useState(passedCourseId);
 
   // Module items state (in edit mode, exactly 1; in add mode, can add multiple)
   const [modules, setModules] = useState([
@@ -72,6 +90,18 @@ export default function AddEditMicrocredentialModule() {
         if (isMounted && streamRes && streamRes.success) {
           const streams = streamRes.streamDataList || [];
           setStreamList(streams);
+
+          // Auto-resolve stream ID if we only have streamName or streamId was 0
+          if (passedStreamName || (passedStreamId && passedStreamId !== "0")) {
+            const matched = streams.find(
+              (s) =>
+                (passedStreamId && passedStreamId !== "0" && String(s.streamId) === String(passedStreamId)) ||
+                (passedStreamName && s.streamName?.toLowerCase().trim() === passedStreamName.toLowerCase().trim())
+            );
+            if (matched && matched.streamId) {
+              setSelectedStreamId(String(matched.streamId));
+            }
+          }
         }
       } catch (err) {
         console.error("Error loading stream list:", err);
@@ -83,23 +113,50 @@ export default function AddEditMicrocredentialModule() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [passedStreamName, passedStreamId]);
 
-  // If stream selected, load courses for that stream
+  // If stream selected or course is pre-selected, load courses
   useEffect(() => {
-    if (!selectedStreamId) return;
     let isMounted = true;
     async function loadCourses() {
       setLoadingCourses(true);
       try {
-        const res = await getMicrocredentialCourse(selectedStreamId);
+        const res = await getMicrocredentialCourse(selectedStreamId || "");
         if (isMounted && res && res.success) {
-          setCourseList(res.microcredentialCourseOutputList || []);
+          let list = res.microcredentialCourseOutputList || [];
+
+          // If passedCourseName exists but not yet in list, prepend it so proper name is shown
+          if (
+            selectedCourseId &&
+            passedCourseName &&
+            !list.some((c) => String(c.microcredentialCourseId) === String(selectedCourseId))
+          ) {
+            list = [
+              {
+                microcredentialCourseId: Number(selectedCourseId),
+                microcredentialCourseName: passedCourseName,
+                streamId: Number(selectedStreamId || 0),
+              },
+              ...list,
+            ];
+          }
+
+          setCourseList(list);
+
+          // If stream wasn't set yet, resolve from matching course in the list
+          if (!selectedStreamId && selectedCourseId) {
+            const match = list.find(
+              (c) => String(c.microcredentialCourseId) === String(selectedCourseId)
+            );
+            if (match && match.streamId && match.streamId !== 0) {
+              setSelectedStreamId(String(match.streamId));
+            }
+          }
         } else if (isMounted) {
           setCourseList([]);
         }
       } catch (err) {
-        console.error("Error loading courses for stream:", err);
+        console.error("Error loading courses:", err);
         if (isMounted) setCourseList([]);
       } finally {
         if (isMounted) setLoadingCourses(false);
@@ -109,7 +166,7 @@ export default function AddEditMicrocredentialModule() {
     return () => {
       isMounted = false;
     };
-  }, [selectedStreamId]);
+  }, [selectedStreamId, selectedCourseId, passedCourseName]);
 
   // If in edit mode, fetch existing module details
   useEffect(() => {
@@ -469,11 +526,20 @@ export default function AddEditMicrocredentialModule() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Course Selection */}
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">
-            Course Association
-          </h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              Course Association
+            </h2>
+            {isCourseLocked && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-900/40">
+                <span>🔒 Course Locked</span>
+              </span>
+            )}
+          </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
-            Select the Stream and Course that this module belongs to.
+            {isCourseLocked
+              ? "Associated Course & Stream are auto-selected and locked from the course table."
+              : "Select the Stream and Course that this module belongs to."}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -485,8 +551,8 @@ export default function AddEditMicrocredentialModule() {
               <select
                 value={selectedStreamId}
                 onChange={handleStreamChange}
-                disabled={loadingStreams || isEditMode}
-                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={loadingStreams || isEditMode || isCourseLocked}
+                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed disabled:border-gray-200 dark:disabled:border-gray-700"
               >
                 <option value="">-- Select Stream to Filter Courses --</option>
                 {streamList.map((stream) => (
@@ -494,6 +560,14 @@ export default function AddEditMicrocredentialModule() {
                     {stream.streamName}
                   </option>
                 ))}
+                {selectedStreamId &&
+                  !streamList.some(
+                    (s) => String(s.streamId) === String(selectedStreamId)
+                  ) && (
+                    <option value={selectedStreamId}>
+                      {passedStreamName || `Stream #${selectedStreamId}`}
+                    </option>
+                  )}
               </select>
             </div>
 
@@ -505,9 +579,9 @@ export default function AddEditMicrocredentialModule() {
               <select
                 value={selectedCourseId}
                 onChange={handleCourseChange}
-                disabled={loadingCourses || isEditMode}
+                disabled={loadingCourses || isEditMode || isCourseLocked}
                 required
-                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full px-3.5 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed disabled:border-gray-200 dark:disabled:border-gray-700"
               >
                 <option value="">
                   {loadingCourses
@@ -524,13 +598,13 @@ export default function AddEditMicrocredentialModule() {
                     {c.microcredentialCourseName}
                   </option>
                 ))}
-                {/* Fallback if courses list doesn't include the edit course */}
+                {/* Fallback if courses list doesn't include the edit/passed course */}
                 {selectedCourseId &&
                   !courseList.some(
                     (c) => String(c.microcredentialCourseId) === String(selectedCourseId)
                   ) && (
                     <option value={selectedCourseId}>
-                      Course #{selectedCourseId}
+                      {passedCourseName || `Course #${selectedCourseId}`}
                     </option>
                   )}
               </select>

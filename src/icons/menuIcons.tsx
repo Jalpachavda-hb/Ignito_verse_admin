@@ -239,3 +239,40 @@ export const MegaphoneIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) =>
     <path d="M18 11c0-.67 0-1.33-.21-2H13V4.07C10.55 4.98 9 7.4 9 10.1v3.8c0 2.7 1.55 5.12 4 6.03V15h4.79c.14-.64.21-1.33.21-2v-2zm3-2h-1.35c.22.63.35 1.3.35 2s-.13 1.37-.35 2H21c.55 0 1-.45 1-1v-2c0-.55-.45-1-1-1zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h3V9H4zm7 11.95V22h2v-1.05c-1-.24-1.74-.59-2-.95z" />
   </svg>
 );
+
+// Video Camera Icon for Zoom Meeting List
+export const ZoomMeetingIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+  </svg>
+);
+
+// Google G Icon for Google Calender List
+export const GoogleGIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.344-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" />
+  </svg>
+);
+
+// Desktop Monitor Icon for Google Meet List
+export const DesktopMonitorIcon: React.FC<IconProps> = ({ className = "w-5 h-5" }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M20 3H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h6v2H8v2h8v-2h-2v-2h6c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 12H4V5h16v10z" />
+  </svg>
+);
+

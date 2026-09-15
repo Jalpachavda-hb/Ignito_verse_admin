@@ -20,6 +20,9 @@ import {
   HomeMenuIcon,
   HandshakeIcon,
   QuoteReviewIcon,
+  ZoomMeetingIcon,
+  GoogleGIcon,
+  DesktopMonitorIcon,
 } from "../icons/menuIcons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -112,6 +115,21 @@ const navItems: NavItem[] = [
         icon: <QuoteReviewIcon className="w-4 h-4" />,
       },
     ],
+  },
+  {
+    name: "Zoom Meeting List",
+    path: "/zoom-meeting-list",
+    icon: <ZoomMeetingIcon className="w-5 h-5" />,
+  },
+  {
+    name: "Google Calender List",
+    path: "/google-calender-list",
+    icon: <GoogleGIcon className="w-5 h-5" />,
+  },
+  {
+    name: "Google Meet List",
+    path: "/google-meet-list",
+    icon: <DesktopMonitorIcon className="w-5 h-5" />,
   },
 ];
 

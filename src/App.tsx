@@ -31,12 +31,14 @@ import {
 import {
   MicrocredentialModuleList,
   AddEditMicrocredentialModule,
+  CourseModuleDetailList,
 } from "./components/MicrocredentialModule";
 import {
   MicrocredentialTopicList,
   AddMicrocredentialCourseTopic,
   EditMicrocredentialCourseTopic,
   CommonDiscussion,
+  ModuleTopicDetailList,
 } from "./components/MicrocredentialTopic";
 import {
   MicrocredentialQuizList,
@@ -98,6 +100,14 @@ export default function App() {
               element={<MicrocredentialModuleList />}
             />
             <Route
+              path="/microcredential/course-modules/:courseId"
+              element={<CourseModuleDetailList />}
+            />
+            <Route
+              path="/microcredential/module-list/:courseId"
+              element={<CourseModuleDetailList />}
+            />
+            <Route
               path="/IgnitoMicroCredencialDetail/MicrocredentialModuleMasterList"
               element={<MicrocredentialModuleList />}
             />
@@ -110,6 +120,14 @@ export default function App() {
               element={<AddEditMicrocredentialModule />}
             />
             <Route
+              path="/microcredential/module-topics/:moduleId"
+              element={<ModuleTopicDetailList />}
+            />
+            <Route
+              path="/microcredential/topic-list/:moduleId"
+              element={<ModuleTopicDetailList />}
+            />
+            <Route
               path="/microcredential/topic-list"
               element={<MicrocredentialTopicList />}
             />
@@ -119,6 +137,14 @@ export default function App() {
             />
             <Route
               path="/microcredential/topic-edit/:id"
+              element={<EditMicrocredentialCourseTopic />}
+            />
+            <Route
+              path="/microcredential/topic-edit"
+              element={<EditMicrocredentialCourseTopic />}
+            />
+            <Route
+              path="/microcredential/module-topic-edit/:moduleId"
               element={<EditMicrocredentialCourseTopic />}
             />
             <Route
@@ -268,6 +294,24 @@ export default function App() {
             <Route
               path="/website/common-faq-list"
               element={<PlaceholderPage title="Common FAQ List" />}
+            />
+
+            {/* Meetings & Calendar Routes */}
+            <Route
+              path="/zoom-meeting-list"
+              element={<PlaceholderPage title="Zoom Meeting List" />}
+            />
+            <Route
+              path="/google-calender-list"
+              element={<PlaceholderPage title="Google Calender List" />}
+            />
+            <Route
+              path="/google-calendar-list"
+              element={<PlaceholderPage title="Google Calender List" />}
+            />
+            <Route
+              path="/google-meet-list"
+              element={<PlaceholderPage title="Google Meet List" />}
             />
           </Route>
 

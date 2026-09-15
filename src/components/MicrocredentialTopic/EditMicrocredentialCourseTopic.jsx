@@ -19,6 +19,7 @@ import {
   downloadMicroTopicTemplate,
   uploadMicroTopicExcel,
   getMicrocredentialModuleByCourseId,
+  getMicrocredentialTopicByModuleId,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
 
@@ -36,12 +37,49 @@ export default function EditMicrocredentialCourseTopic() {
     0
   );
   const stateCourseId = Number(
+    location.state?.courseId ||
     location.state?.item?.microcredentialCourseId ||
     location.state?.item?.MicrocredentialCourseId ||
-    location.state?.courseId ||
     0
   );
   const courseId = params.id ? Number(params.id) : (queryCourseId || stateCourseId || 0);
+
+  // Extract moduleId from params, query, or state
+  const queryModuleId = Number(
+    searchParams.get("MicrocredentialModuleMasterId") ||
+    searchParams.get("microcredentialModuleMasterId") ||
+    searchParams.get("moduleId") ||
+    0
+  );
+  const stateModuleId = Number(
+    location.state?.moduleId ||
+    location.state?.item?.microcredentialModuleMasterId ||
+    location.state?.item?.MicrocredentialModuleMasterId ||
+    0
+  );
+  const paramModuleId = params.moduleId ? Number(params.moduleId) : 0;
+  const initialModuleId = paramModuleId || queryModuleId || stateModuleId;
+
+  // Passed context values for pre-selection / locking
+  const passedCourseName =
+    location.state?.courseName ||
+    location.state?.item?.microcredentialCourseName ||
+    "";
+  const passedStreamId = location.state?.streamId ? String(location.state.streamId) : "";
+  const passedStreamName = location.state?.streamName || "";
+  const passedModuleName =
+    location.state?.moduleName ||
+    location.state?.item?.moduleName ||
+    "";
+
+  const isCourseLocked = Boolean(
+    location.state?.isCourseLocked ||
+    (courseId > 0 && initialModuleId > 0)
+  );
+  const isModuleLocked = Boolean(
+    location.state?.isModuleLocked ||
+    initialModuleId > 0
+  );
 
   // Loading and feedback states
   const [loadingInitial, setLoadingInitial] = useState(true);
@@ -56,14 +94,10 @@ export default function EditMicrocredentialCourseTopic() {
   const [streamList, setStreamList] = useState([]);
   const [courseList, setCourseList] = useState([]);
   const [moduleList, setModuleList] = useState([]);
-  const [selectedStreamId, setSelectedStreamId] = useState("");
+  const [selectedStreamId, setSelectedStreamId] = useState(passedStreamId);
   const [selectedCourseId, setSelectedCourseId] = useState(courseId ? String(courseId) : "");
   const [selectedModuleId, setSelectedModuleId] = useState(
-    location.state?.item?.microcredentialModuleMasterId
-      ? String(location.state.item.microcredentialModuleMasterId)
-      : location.state?.moduleId
-      ? String(location.state.moduleId)
-      : ""
+    initialModuleId ? String(initialModuleId) : ""
   );
   const [loadingModules, setLoadingModules] = useState(false);
 
@@ -91,6 +125,58 @@ export default function EditMicrocredentialCourseTopic() {
 
   const excelInputRef = useRef(null);
 
+  // Load topics specifically by Module ID via GetMicrocredentialTopicByModuleId
+  const loadTopicsForModule = async (moduleIdToLoad) => {
+    if (!moduleIdToLoad || Number(moduleIdToLoad) <= 0) return null;
+    try {
+      const topicRes = await getMicrocredentialTopicByModuleId(Number(moduleIdToLoad));
+      if (topicRes && topicRes.success) {
+        const rawTopics = topicRes.microcredentialTopicList || [];
+        if (Array.isArray(rawTopics) && rawTopics.length > 0) {
+          setTopics(
+            rawTopics.map((t) => ({
+              microCourseTopicId: t.microCourseTopicId,
+              topicName:
+                t.topicName ||
+                t.TopicName ||
+                "",
+              videoTitle:
+                t.videoTitle ||
+                t.VideoTitle ||
+                "",
+              topicVideoUrl:
+                t.topicVideoUrl ||
+                t.TopicVideoUrl ||
+                t.videoUrl ||
+                t.watchVideoURL ||
+                "",
+              topicPdf:
+                t.topicPdf ||
+                t.TopicPdf ||
+                t.topicDocument ||
+                "",
+              pdfFile: null,
+            }))
+          );
+        } else {
+          setTopics([
+            {
+              topicName: "",
+              videoTitle: "",
+              topicVideoUrl: "",
+              topicPdf: "",
+              pdfFile: null,
+            },
+          ]);
+        }
+        return topicRes;
+      }
+    } catch (err) {
+      console.warn("Could not load topics by module ID:", err);
+    }
+    return null;
+  };
+
   // Fetch Stream list & Load Existing Course Data on Mount
   useEffect(() => {
     let isMounted = true;
@@ -105,13 +191,24 @@ export default function EditMicrocredentialCourseTopic() {
         const streams = streamRes?.success ? (streamRes.streamDataList || []) : [];
         if (isMounted) setStreamList(streams);
 
-        const targetCourseId = courseId;
+        let targetCourseId = courseId;
+        const targetModuleId = initialModuleId;
         const stateItem = location.state?.item;
         let detailRes = null;
 
-        // 2. Fetch Topics & Student Docs for this Course
-        if (targetCourseId > 0) {
+        // 2. Fetch Topics strictly assigned to module via GetMicrocredentialTopicByModuleId
+        if (targetModuleId > 0) {
+          const modTopicsRes = await loadTopicsForModule(targetModuleId);
+          if (modTopicsRes?.microcredentialTopicList?.[0]?.microcredentialCourseId && !targetCourseId) {
+            targetCourseId = modTopicsRes.microcredentialTopicList[0].microcredentialCourseId;
+          }
+        } else if (targetCourseId > 0) {
+          // Fallback to course-level topics if no module was specified
           detailRes = await loadTopicDetailsAndDocs(targetCourseId);
+        }
+
+        // 3. Fetch modules and course docs for course
+        if (targetCourseId > 0) {
           try {
             const modRes = await getMicrocredentialModuleByCourseId(targetCourseId);
             if (modRes && modRes.success) {
@@ -120,23 +217,47 @@ export default function EditMicrocredentialCourseTopic() {
           } catch (mErr) {
             console.warn("Could not fetch modules for course:", mErr);
           }
+
+          // Fetch student download documents
+          try {
+            const docsRes = await getMicrocredentialStudentDownloadDocuments(targetCourseId);
+            if (docsRes && docsRes.success) {
+              const list =
+                docsRes.adminGetMicrocredentialStudentDownloadDocumentsData ||
+                docsRes.microcredentialStudentDownloadDocumentList ||
+                [];
+              if (Array.isArray(list) && list.length > 0) {
+                setStudentDocs(
+                  list.map((d) => ({
+                    originalFileName: d.originalFileName || d.OriginalFileName || "Student Document",
+                    givenFileName: d.givenFileName || d.GivenFileName || "",
+                    filePath: d.filePath || d.microcredentialStudentDownloadDocument || d.MicrocredentialStudentDownloadDocument || "",
+                    file: null,
+                  }))
+                );
+              }
+            }
+          } catch (dErr) {
+            console.warn("Could not fetch student docs:", dErr);
+          }
         }
 
-        // 3. Match Stream & Populate Course Dropdown
-        let targetStreamId = "";
-        if (stateItem?.streamId || stateItem?.StreamId) {
-          targetStreamId = Number(stateItem.streamId || stateItem.StreamId);
-        } else if (detailRes?.streamId) {
-          targetStreamId = Number(detailRes.streamId);
-        } else if (stateItem?.streamName || detailRes?.streamName) {
-          const sName = stateItem?.streamName || detailRes?.streamName;
-          const found = streams.find(
-            (s) => s.streamName?.toLowerCase() === sName?.toLowerCase()
-          );
-          if (found) targetStreamId = found.streamId;
+        // 4. Match Stream & Populate Course Dropdown
+        let targetStreamId = passedStreamId ? Number(passedStreamId) : "";
+        if (!targetStreamId) {
+          if (stateItem?.streamId || stateItem?.StreamId) {
+            targetStreamId = Number(stateItem.streamId || stateItem.StreamId);
+          } else if (detailRes?.streamId) {
+            targetStreamId = Number(detailRes.streamId);
+          } else if (passedStreamName || stateItem?.streamName || detailRes?.streamName) {
+            const sName = passedStreamName || stateItem?.streamName || detailRes?.streamName;
+            const found = streams.find(
+              (s) => s.streamName?.toLowerCase().trim() === sName?.toLowerCase().trim()
+            );
+            if (found) targetStreamId = found.streamId;
+          }
         }
 
-        // 4. If stream still not found, query getMicrocredentialCourseDetail
         if (!targetStreamId && targetCourseId > 0) {
           try {
             const courseDetailRes = await getMicrocredentialCourseDetail(targetCourseId);
@@ -144,7 +265,7 @@ export default function EditMicrocredentialCourseTopic() {
               targetStreamId = Number(courseDetailRes.microcredentialCourseStreamId);
             } else if (courseDetailRes?.streamName) {
               const found = streams.find(
-                (s) => s.streamName?.toLowerCase() === courseDetailRes.streamName.toLowerCase()
+                (s) => s.streamName?.toLowerCase().trim() === courseDetailRes.streamName.toLowerCase().trim()
               );
               if (found) targetStreamId = found.streamId;
             }
@@ -163,11 +284,11 @@ export default function EditMicrocredentialCourseTopic() {
         if (targetStreamId) {
           if (isMounted) {
             setSelectedStreamId(String(targetStreamId));
-            setSelectedCourseId(String(targetCourseId));
+            if (targetCourseId) setSelectedCourseId(String(targetCourseId));
+            if (targetModuleId) setSelectedModuleId(String(targetModuleId));
           }
           await loadCoursesForStream(targetStreamId, targetCourseId);
         } else if (targetCourseId > 0) {
-          // Scan streams if needed to find which stream owns this course
           for (const s of streams) {
             const sId = s.streamId;
             const cRes = await getMicrocredentialCourse(sId);
@@ -180,6 +301,7 @@ export default function EditMicrocredentialCourseTopic() {
                 setSelectedStreamId(String(sId));
                 setCourseList(cList);
                 setSelectedCourseId(String(targetCourseId));
+                if (targetModuleId) setSelectedModuleId(String(targetModuleId));
                 break;
               }
             }
@@ -198,7 +320,7 @@ export default function EditMicrocredentialCourseTopic() {
     return () => {
       isMounted = false;
     };
-  }, [courseId]);
+  }, [courseId, initialModuleId]);
 
   // Load courses for selected stream
   const loadCoursesForStream = async (streamId, autoSelectCourseId = 0) => {
@@ -368,6 +490,22 @@ export default function EditMicrocredentialCourseTopic() {
       await loadTopicDetailsAndDocs(Number(newCourseId));
     } catch (err) {
       console.error("Error loading topic details for selected course:", err);
+    }
+  };
+
+  // Module dropdown change: dynamically load topics assigned to this module via GetMicrocredentialTopicByModuleId
+  const handleModuleChange = async (e) => {
+    const newModId = e.target.value;
+    setSelectedModuleId(newModId);
+    if (!newModId) return;
+
+    setLoadingInitial(true);
+    try {
+      await loadTopicsForModule(Number(newModId));
+    } catch (err) {
+      console.error("Error loading module topics on module change:", err);
+    } finally {
+      setLoadingInitial(false);
     }
   };
 
@@ -759,11 +897,11 @@ export default function EditMicrocredentialCourseTopic() {
 
       // 4. API 5 Payload: MicroCourseTopicAddUpdate
       const payload = {
-        StreamId: Number(selectedStreamId),
+        AdminId: 1,
         MicrocredentialCourseId: Number(selectedCourseId),
         MicrocredentialModuleMasterId: Number(selectedModuleId || 0),
-        AdminId: 1,
-        UploadMicroDocument: finalMainDocPath,
+        StreamId: Number(selectedStreamId),
+        UploadMicroDocument: finalMainDocPath || "",
         MicrocredentialCourseTopicList: finalTopicsList,
         MicrocredentialStudentDownloadDocumentList: finalStudentDocsList,
       };
@@ -771,13 +909,36 @@ export default function EditMicrocredentialCourseTopic() {
       const res = await microCourseTopicAddUpdate(payload);
 
       if (res && res.success !== false) {
-        const msg = res.message || "Microcredential course topics updated successfully.";
+        const msg = res.message || "Microcredential module topics updated successfully.";
         setSuccessMessage(msg);
 
         setTimeout(() => {
-          navigate("/microcredential/topic-list", {
-            state: { successMessage: msg },
-          });
+          if (selectedModuleId) {
+            navigate(`/microcredential/module-topics/${selectedModuleId}`, {
+              state: {
+                successMessage: msg,
+                courseId: selectedCourseId,
+                courseName:
+                  courseList.find((c) => String(c.microcredentialCourseId) === String(selectedCourseId))?.microcredentialCourseName ||
+                  passedCourseName ||
+                  location.state?.courseName,
+                streamId: selectedStreamId,
+                streamName:
+                  streamList.find((s) => String(s.streamId) === String(selectedStreamId))?.streamName ||
+                  passedStreamName ||
+                  location.state?.streamName,
+                moduleId: selectedModuleId,
+                moduleName:
+                  moduleList.find((m) => String(m.microcredentialModuleMasterId) === String(selectedModuleId))?.moduleName ||
+                  passedModuleName ||
+                  location.state?.moduleName,
+              },
+            });
+          } else {
+            navigate("/microcredential/topic-list", {
+              state: { successMessage: msg },
+            });
+          }
         }, 1000);
       } else {
         setErrorMessage(
@@ -865,7 +1026,32 @@ export default function EditMicrocredentialCourseTopic() {
           {/* Back Button */}
           <button
             type="button"
-            onClick={() => navigate("/microcredential/topic-list")}
+            onClick={() => {
+              if (selectedModuleId || initialModuleId) {
+                const backModId = selectedModuleId || initialModuleId;
+                navigate(`/microcredential/module-topics/${backModId}`, {
+                  state: {
+                    courseId: selectedCourseId || courseId,
+                    courseName:
+                      courseList.find((c) => String(c.microcredentialCourseId) === String(selectedCourseId))?.microcredentialCourseName ||
+                      passedCourseName ||
+                      location.state?.courseName,
+                    streamId: selectedStreamId,
+                    streamName:
+                      streamList.find((s) => String(s.streamId) === String(selectedStreamId))?.streamName ||
+                      passedStreamName ||
+                      location.state?.streamName,
+                    moduleId: backModId,
+                    moduleName:
+                      moduleList.find((m) => String(m.microcredentialModuleMasterId) === String(backModId))?.moduleName ||
+                      passedModuleName ||
+                      location.state?.moduleName,
+                  },
+                });
+              } else {
+                navigate("/microcredential/topic-list");
+              }
+            }}
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/90 px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:border-gray-300 hover:bg-gray-100 active:scale-95 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <svg
@@ -881,7 +1067,7 @@ export default function EditMicrocredentialCourseTopic() {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            <span>Back to Topic List</span>
+            <span>Back to Topics</span>
           </button>
         </div>
       </div>
@@ -918,6 +1104,24 @@ export default function EditMicrocredentialCourseTopic() {
 
       {/* Main Card Container */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        {/* Module Context Info Banner if preselected */}
+        {selectedModuleId && (
+          <div className="mb-6 rounded-xl border border-purple-100 bg-purple-50/70 p-4 text-xs text-purple-800 dark:border-purple-900/40 dark:bg-purple-950/20 dark:text-purple-300 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold">Active Module Scope:</span>
+              <span className="font-semibold text-purple-950 dark:text-purple-200">
+                {moduleList.find((m) => String(m.microcredentialModuleMasterId) === String(selectedModuleId))?.moduleName || passedModuleName || `Module #${selectedModuleId}`}
+              </span>
+              {passedCourseName && (
+                <span className="text-purple-600 dark:text-purple-400">({passedCourseName})</span>
+              )}
+            </div>
+            <span className="text-[11px] font-semibold bg-purple-200/70 dark:bg-purple-900/50 px-2.5 py-0.5 rounded-md">
+              Topics Strictly Assigned to Module
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           {/* Top Fields Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-start pb-6 border-b border-gray-100 dark:border-gray-800">
@@ -931,8 +1135,8 @@ export default function EditMicrocredentialCourseTopic() {
                 name="ddMicrocredentialCourseStreamId"
                 value={selectedStreamId}
                 onChange={handleStreamChange}
-                disabled={loadingInitial || saving}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                disabled={isCourseLocked || loadingInitial || saving}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
               >
                 <option value="">Select Stream</option>
                 {streamList.map((stream) => (
@@ -956,7 +1160,7 @@ export default function EditMicrocredentialCourseTopic() {
                 name="courseSelect"
                 value={selectedCourseId}
                 onChange={handleCourseChange}
-                disabled={!selectedStreamId || loadingCourses || saving}
+                disabled={isCourseLocked || !selectedStreamId || loadingCourses || saving}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
               >
                 <option value="">
@@ -982,8 +1186,8 @@ export default function EditMicrocredentialCourseTopic() {
                 id="moduleSelect"
                 name="moduleSelect"
                 value={selectedModuleId}
-                onChange={(e) => setSelectedModuleId(e.target.value)}
-                disabled={!selectedCourseId || loadingModules || saving}
+                onChange={handleModuleChange}
+                disabled={isModuleLocked || !selectedCourseId || loadingModules || saving}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
               >
                 <option value="">
