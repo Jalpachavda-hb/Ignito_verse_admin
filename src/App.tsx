@@ -15,6 +15,8 @@ import BasicTables from "./pages/Tables/BasicTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PublicRoute from "./components/auth/PublicRoute";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import PlaceholderPage from "./pages/PlaceholderPage";
@@ -54,9 +56,10 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Dashboard Layout */}
-          <Route element={<AppLayout />}>
-            <Route index path="/" element={<Home />} />
+          {/* Protected Dashboard Layout */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route index path="/" element={<Home />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
@@ -314,12 +317,16 @@ export default function App() {
               element={<PlaceholderPage title="Google Meet List" />}
             />
           </Route>
+          </Route>
 
-          {/* Auth Layout */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<Navigate to="/signin" replace />} />
+          {/* Public Auth Routes */}
+          <Route element={<PublicRoute />}>
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/login" element={<Navigate to="/signin" replace />} />
+            <Route path="/signup" element={<Navigate to="/signin" replace />} />
+          </Route>
 
-          {/* Fallback Route */}
+          {/* Fallback 404 Route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

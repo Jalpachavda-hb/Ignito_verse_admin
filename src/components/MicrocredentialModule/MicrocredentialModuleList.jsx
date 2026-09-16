@@ -21,7 +21,7 @@ import {
   FolderIcon,
 } from "../../icons";
 import {
-  microCourseTopicList,
+  adminMicrocredentialCourseList,
   logJsError,
 } from "../../services/adminMicrocredentialService";
 
@@ -63,13 +63,13 @@ export default function MicrocredentialModuleList() {
     }
   }, [successMessage]);
 
-  // Fetch Course List using MicroCourseTopicList API
+  // Fetch Course List using adminMicrocredentialCourseList API
   const fetchCourses = useCallback(async () => {
     setLoading(true);
     setErrorMessage("");
 
     try {
-      const response = await microCourseTopicList(
+      const response = await adminMicrocredentialCourseList(
         currentPage,
         pageSize,
         orderByColumn,
@@ -81,8 +81,8 @@ export default function MicrocredentialModuleList() {
 
       if (response && response.success !== false) {
         const list =
-          response.microCourseTopicList ||
-          response.MicroCourseTopicList ||
+          response.microcredentialCourseOutPutList ||
+          response.MicrocredentialCourseOutPutList ||
           response.data ||
           [];
         setCourseList(Array.isArray(list) ? list : []);
@@ -201,7 +201,7 @@ export default function MicrocredentialModuleList() {
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          <span>+ Add Module</span>
+          <span>Add Module</span>
         </Link>
       </div>
 
@@ -288,23 +288,7 @@ export default function MicrocredentialModuleList() {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell
-                  isHeader
-                  className="w-36 cursor-pointer select-none px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap"
-                  onClick={() => handleSort("UpdatedOn")}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Updated On</span>
-                    <span className="text-gray-400">
-                      {orderByColumn === "UpdatedOn" ? (
-                        orderByDirection === "ASC" ? <ChevronUpIcon className="inline size-3.5" /> : <ChevronDownIcon className="inline size-3.5" />
-                      ) : (
-                        "▾"
-                      )}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell isHeader className="w-48 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                <TableCell isHeader className="w-56 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                   Actions
                 </TableCell>
               </TableRow>
@@ -313,7 +297,7 @@ export default function MicrocredentialModuleList() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-gray-500">
+                  <TableCell colSpan={4} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="size-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                       <span className="text-sm">Loading courses...</span>
@@ -322,7 +306,7 @@ export default function MicrocredentialModuleList() {
                 </TableRow>
               ) : courseList.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <TableCell colSpan={4} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
                     No courses found.
                   </TableCell>
                 </TableRow>
@@ -357,17 +341,14 @@ export default function MicrocredentialModuleList() {
                         <div className="font-semibold text-gray-900 dark:text-white">
                           {item.microcredentialCourseName || `Course #${courseId}`}
                         </div>
-                        <span className="text-[11px] text-gray-400">
-                          Course ID: {courseId}
-                        </span>
+                        {item.courseLevel && (
+                          <span className="text-[11px] text-gray-400">
+                            {item.courseLevel}
+                          </span>
+                        )}
                       </TableCell>
 
-                      {/* 4. Updated On */}
-                      <TableCell className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {formatDateTime(item.updatedOn)}
-                      </TableCell>
-
-                      {/* 5. Actions: View Modules (Opens New Page!) */}
+                      {/* 4. Actions: View Modules & Edit Course */}
                       <TableCell className="px-4 py-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-2">
                           {/* View Modules Button (Opens dedicated new page) */}
@@ -379,16 +360,34 @@ export default function MicrocredentialModuleList() {
                                   courseId,
                                   courseName: item.microcredentialCourseName,
                                   streamName: item.streamName,
-                                  streamId: item.streamId,
+                                  streamId: item.microcredentialCourseStreamId || item.streamId,
                                   item,
                                 },
                               })
                             }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-xs hover:border-blue-300 hover:bg-blue-100 active:scale-95 transition dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/60"
-                            title="View Modules for this Course in New Page"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-2xs hover:border-blue-300 hover:bg-blue-100 active:scale-95 transition dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-300 dark:hover:bg-blue-950/60"
+                            title="View Modules for this Course"
                           >
                             <FolderIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
                             <span>View Modules</span>
+                          </button>
+
+                          {/* Common Edit Course Button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/microcredential/course-edit/${courseId}`, {
+                                state: {
+                                  courseId,
+                                  item,
+                                },
+                              })
+                            }
+                            title="Edit Course"
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          >
+                            <PencilIcon className="size-3.5" />
+                            <span>Edit</span>
                           </button>
 
                           {/* Quick + Add Module */}
@@ -400,7 +399,7 @@ export default function MicrocredentialModuleList() {
                                   courseId,
                                   courseName: item.microcredentialCourseName,
                                   streamName: item.streamName,
-                                  streamId: item.streamId,
+                                  streamId: item.microcredentialCourseStreamId || item.streamId,
                                   isCourseLocked: true,
                                 },
                               })
@@ -408,7 +407,7 @@ export default function MicrocredentialModuleList() {
                             title="Add Module to this Course"
                             className="rounded-lg p-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
                           >
-                            + Add Module
+                            + Module
                           </button>
                         </div>
                       </TableCell>

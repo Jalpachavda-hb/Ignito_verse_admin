@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import {
   EyeCloseIcon,
   EyeIcon,
@@ -12,6 +12,8 @@ import { validateAdminCredential } from "../../services/authService";
 
 export default function SignInForm() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const destination = (location.state as any)?.from?.pathname || "/";
 
   // Form State
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -48,7 +50,7 @@ export default function SignInForm() {
       if (result.success) {
         setSuccessMessage(result.message || "Authentication successful! Redirecting...");
         setTimeout(() => {
-          navigate("/", { replace: true });
+          navigate(destination, { replace: true });
         }, 500);
       } else {
         setErrorMessage(

@@ -169,7 +169,7 @@ export async function commonUploadFile(
             body: inputDto.body
         });
 
-        if (!response.ok && (response.status === 404 || response.status === 405)) {
+        if (!response.ok && (response.status === 404 || response.status === 405 || response.status === 0)) {
             response = await apiClient('api/IgnitoMicroCredencialAPI/CommonUploadFile', {
                 method: 'POST',
                 headers: inputDto.headers,

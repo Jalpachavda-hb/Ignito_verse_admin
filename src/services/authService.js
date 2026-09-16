@@ -78,6 +78,20 @@ export function logoutUser() {
 }
 
 /**
+ * Checks if admin has an active authenticated session.
+ * @returns {boolean} True if authenticated, false otherwise.
+ */
+export function isAuthenticated() {
+  try {
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    const user = localStorage.getItem(STORAGE_USER_KEY);
+    return Boolean(token || user);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Gets currently logged in user session from localStorage if available.
  */
 export function getSavedUserSession() {

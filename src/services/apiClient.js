@@ -20,6 +20,44 @@ function getNormalizedBaseUrl(rawUrl) {
 
 const BASE_URL = getNormalizedBaseUrl(RAW_BASE_URL);
 
+async function parseFetchResponse(res, options = {}) {
+  let data = null;
+  const contentType = res.headers.get('content-type');
+  if (
+    options.responseType === 'blob' ||
+    (contentType &&
+      (contentType.includes('spreadsheetml') ||
+        contentType.includes('octet-stream') ||
+        contentType.includes('application/vnd')))
+  ) {
+    data = await res.blob();
+  } else if (contentType && contentType.includes('json')) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  // Auto-clean stale token & user if 401 occurs on protected endpoint
+  if (res.status === 401) {
+    localStorage.removeItem('ignito_auth_token');
+    localStorage.removeItem('ignito_auth_user');
+    localStorage.removeItem('ignito_admin_id');
+  }
+
+  return {
+    data,
+    status: res.status,
+    statusText: res.statusText,
+    ok: res.ok,
+    headers: res.headers,
+  };
+}
+
 /**
  * Custom fetch wrapper for API communication.
  * 
@@ -29,9 +67,14 @@ const BASE_URL = getNormalizedBaseUrl(RAW_BASE_URL);
  */
 export async function apiClient(endpoint, options = {}) {
   const cleanEndpoint = endpoint.replace(/^\/?api\//i, '').replace(/^\//, '');
+  const isFormData = options.body instanceof FormData;
+
+  // For multipart FormData uploads, send directly to API Gateway to avoid local dev proxy connection resets (ERR_CONNECTION_RESET)
   const url = endpoint.startsWith('http://') || endpoint.startsWith('https://')
     ? endpoint
-    : `${BASE_URL}/${cleanEndpoint}`;
+    : (isFormData && DEFAULT_API_GATEWAY_URL
+        ? `${DEFAULT_API_GATEWAY_URL}/${cleanEndpoint}`
+        : `${BASE_URL}/${cleanEndpoint}`);
 
   const defaultHeaders = {
     'Content-Type': 'application/json',
@@ -45,7 +88,7 @@ export async function apiClient(endpoint, options = {}) {
   };
 
   // If request body is FormData, browser must set Content-Type header with boundary
-  if (options.body instanceof FormData) {
+  if (isFormData) {
     delete headers['Content-Type'];
   }
 
@@ -69,35 +112,25 @@ export async function apiClient(endpoint, options = {}) {
       headers,
     });
 
-    let data = null;
-    const contentType = res.headers.get('content-type');
-    if (options.responseType === 'blob' || (contentType && (contentType.includes('spreadsheetml') || contentType.includes('octet-stream') || contentType.includes('application/vnd')))) {
-      data = await res.blob();
-    } else if (contentType && contentType.includes('json')) {
-      data = await res.json();
-    } else {
-      const text = await res.text();
+    return await parseFetchResponse(res, options);
+  } catch (error) {
+    console.warn('API Client Network Error on', url, error);
+
+    // If request failed via local proxy or relative URL, retry directly to API Gateway URL as fallback
+    if (!url.startsWith(DEFAULT_API_GATEWAY_URL) && DEFAULT_API_GATEWAY_URL) {
       try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
+        console.warn('Retrying request directly to API Gateway...');
+        const directUrl = `${DEFAULT_API_GATEWAY_URL}/${cleanEndpoint}`;
+        const retryRes = await fetch(directUrl, {
+          ...options,
+          headers,
+        });
+        return await parseFetchResponse(retryRes, options);
+      } catch (retryError) {
+        console.error('Direct retry also failed:', retryError);
       }
     }
 
-    // Auto-clean stale token if 401 occurs on protected endpoint
-    if (res.status === 401) {
-      localStorage.removeItem('ignito_auth_token');
-    }
-
-    return {
-      data,
-      status: res.status,
-      statusText: res.statusText,
-      ok: res.ok,
-      headers: res.headers,
-    };
-  } catch (error) {
-    console.error('API Client Network Error:', error);
     return {
       data: null,
       status: 0,

@@ -86,13 +86,15 @@ export default function ModuleTopicDetailList() {
     try {
       const response = await getMicrocredentialTopicByModuleId(moduleId);
 
-      if (response && response.success !== false) {
+      if (response && (response.success !== false || Array.isArray(response.microcredentialTopicList))) {
         const list = response.microcredentialTopicList || [];
-        setTopicList(list);
-      } else {
-        const msg = response?.message || "Failed to load topics for this module.";
+        setTopicList(Array.isArray(list) ? list : []);
+      } else if (response?.message || response?.errorDescription) {
+        const msg = response.message || response.errorDescription;
         setErrorMessage(msg);
         logJsError(msg, "", "ModuleTopicDetailList.jsx fetchTopics");
+      } else {
+        setTopicList([]);
       }
     } catch (err) {
       console.error("Error in fetchTopics:", err);
@@ -259,7 +261,7 @@ export default function ModuleTopicDetailList() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>+ Add Topic</span>
+              <span>Add Topic</span>
             </button>
           </div>
         </div>

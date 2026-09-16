@@ -79,13 +79,15 @@ export default function CourseModuleDetailList() {
     try {
       const response = await getMicrocredentialModuleByCourseId(courseId);
 
-      if (response && response.success !== false) {
+      if (response && (response.success !== false || Array.isArray(response.microcredentialModuleList))) {
         const list = response.microcredentialModuleList || [];
-        setModuleList(list);
-      } else {
-        const msg = response?.message || "Failed to load modules for this course.";
+        setModuleList(Array.isArray(list) ? list : []);
+      } else if (response?.message || response?.errorDescription) {
+        const msg = response.message || response.errorDescription;
         setErrorMessage(msg);
         logJsError(msg, "", "CourseModuleDetailList.jsx fetchModules");
+      } else {
+        setModuleList([]);
       }
     } catch (err) {
       console.error("Error in fetchModules:", err);
@@ -224,7 +226,7 @@ export default function CourseModuleDetailList() {
             </div>
           </div>
 
-          {/* Top Right Action: Add Module for this course */}
+          {/* Top Right Action: Add Module */}
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -245,7 +247,7 @@ export default function CourseModuleDetailList() {
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              <span>+ Add Module</span>
+              <span>Add Module</span>
             </button>
           </div>
         </div>
@@ -418,30 +420,6 @@ export default function CourseModuleDetailList() {
                           >
                             <ListIcon className="size-3.5" />
                             <span>View Topics</span>
-                          </button>
-
-                          {/* Edit Topics Button (Module-wise Topic Editor) */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/microcredential/topic-edit/${courseId}`, {
-                                state: {
-                                  courseId,
-                                  courseName,
-                                  streamId,
-                                  streamName,
-                                  moduleId: item.microcredentialModuleMasterId,
-                                  moduleName: item.moduleName,
-                                  isCourseLocked: true,
-                                  isModuleLocked: true,
-                                },
-                              })
-                            }
-                            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 shadow-xs hover:bg-purple-100 active:scale-95 transition dark:border-purple-900/40 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-950/60"
-                            title="Edit all topics for this module"
-                          >
-                            <PencilIcon className="size-3.5" />
-                            <span>Edit Topics</span>
                           </button>
 
                           {/* Quick + Topic button */}

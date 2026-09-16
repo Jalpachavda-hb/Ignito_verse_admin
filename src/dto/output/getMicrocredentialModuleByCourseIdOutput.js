@@ -8,7 +8,8 @@
  */
 export function parseGetMicrocredentialModuleByCourseIdOutput(rawJson = {}, status = 200) {
   const isHttpOk = status >= 200 && status < 300;
-  const isSuccess = Boolean(rawJson?.isSuccess ?? rawJson?.IsSuccess ?? isHttpOk);
+  const hasErrorMessage = Boolean(rawJson?.message && !rawJson?.message.toLowerCase().includes("no record")) && Boolean(rawJson?.errorDescription);
+  const isSuccess = Boolean(rawJson?.isSuccess ?? rawJson?.IsSuccess ?? isHttpOk) || (isHttpOk && !hasErrorMessage);
 
   const rawList =
     rawJson?.microcredentialModuleList ||
