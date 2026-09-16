@@ -18,7 +18,7 @@ export default function AuthLayout({
           <div className="relative z-10 mb-4">
             <a href="/" className="inline-block">
               <img
-                src="/Ignitoverse Logonew.png"
+                src="/newlg.png"
                 alt="IgnitoVerse Online Learning Platform"
                 className="h-9 sm:h-10 w-auto object-contain"
               />

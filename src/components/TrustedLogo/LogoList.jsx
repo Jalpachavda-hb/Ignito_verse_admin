@@ -587,7 +587,7 @@ export default function LogoList({ initialData = null, onDelete = () => { } } = 
                               className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-105"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse Logonew.png";
+                                e.target.src = "/newlg.png";
                               }}
                             />
                           ) : (
@@ -612,25 +612,6 @@ export default function LogoList({ initialData = null, onDelete = () => { } } = 
                       {/* 3. Action */}
                       <TableCell className="px-6 py-4 text-end">
                         <div className="flex items-center justify-end gap-2">
-                          {/* View Full Image */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPreview(item)}
-                            title="View Image"
-                            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-brand-500 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-brand-400"
-                          >
-                            <svg
-                              className="size-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </button>
-
                           {/* Delete Action */}
                           <button
                             type="button"
@@ -944,7 +925,7 @@ export default function LogoList({ initialData = null, onDelete = () => { } } = 
                       className="max-h-56 max-w-full object-contain"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "/Ignitoverse Logonew.png";
+                        e.target.src = "/newlg.png";
                       }}
                     />
                   ))}
@@ -956,7 +937,7 @@ export default function LogoList({ initialData = null, onDelete = () => { } } = 
                   className="max-h-56 max-w-full object-contain"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = "/Ignitoverse Logonew.png";
+                    e.target.src = "/newlg.png";
                   }}
                 />
               )}

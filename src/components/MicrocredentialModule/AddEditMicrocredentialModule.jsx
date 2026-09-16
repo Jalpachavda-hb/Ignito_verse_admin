@@ -37,8 +37,8 @@ export default function AddEditMicrocredentialModule() {
   const passedCourseId = location.state?.courseId
     ? String(location.state.courseId)
     : location.state?.item?.microcredentialCourseId
-    ? String(location.state.item.microcredentialCourseId)
-    : "";
+      ? String(location.state.item.microcredentialCourseId)
+      : "";
   const passedCourseName =
     location.state?.courseName ||
     location.state?.item?.microcredentialCourseName ||
@@ -50,8 +50,8 @@ export default function AddEditMicrocredentialModule() {
   const passedStreamId = location.state?.streamId
     ? String(location.state.streamId)
     : location.state?.item?.streamId
-    ? String(location.state.item.streamId)
-    : "";
+      ? String(location.state.item.streamId)
+      : "";
 
   const isCourseLocked = Boolean(
     isEditMode ||
@@ -716,7 +716,7 @@ export default function AddEditMicrocredentialModule() {
                         onError={(e) => {
                           e.target.onerror = null;
                           if (!mod.bannerFile) {
-                            e.target.src = "/Ignitoverse Logonew.png";
+                            e.target.src = "/newlg.png";
                           }
                         }}
                       />

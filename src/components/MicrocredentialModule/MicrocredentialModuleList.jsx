@@ -10,12 +10,9 @@ import {
   TableCell,
 } from "../ui/table";
 import {
-  TrashBinIcon,
   CloseIcon,
   CheckCircleIcon,
   AlertIcon,
-  EyeIcon,
-  PencilIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   FolderIcon,
@@ -370,44 +367,6 @@ export default function MicrocredentialModuleList() {
                           >
                             <FolderIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
                             <span>View Modules</span>
-                          </button>
-
-                          {/* Common Edit Course Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/microcredential/course-edit/${courseId}`, {
-                                state: {
-                                  courseId,
-                                  item,
-                                },
-                              })
-                            }
-                            title="Edit Course"
-                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 active:scale-95 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                          >
-                            <PencilIcon className="size-3.5" />
-                            <span>Edit</span>
-                          </button>
-
-                          {/* Quick + Add Module */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate("/microcredential/module-add", {
-                                state: {
-                                  courseId,
-                                  courseName: item.microcredentialCourseName,
-                                  streamName: item.streamName,
-                                  streamId: item.microcredentialCourseStreamId || item.streamId,
-                                  isCourseLocked: true,
-                                },
-                              })
-                            }
-                            title="Add Module to this Course"
-                            className="rounded-lg p-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-                          >
-                            + Module
                           </button>
                         </div>
                       </TableCell>

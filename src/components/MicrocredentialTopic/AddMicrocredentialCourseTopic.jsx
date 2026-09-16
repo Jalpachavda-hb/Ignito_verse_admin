@@ -662,9 +662,15 @@ export default function AddMicrocredentialCourseTopic() {
         setSuccessMessage(msg);
 
         setTimeout(() => {
-          navigate("/microcredential/topic-list", {
-            state: { successMessage: msg },
-          });
+          if (selectedModuleId) {
+            navigate(`/microcredential/module-topics/${selectedModuleId}`, {
+              state: { successMessage: msg },
+            });
+          } else {
+            navigate("/microcredential/module-list", {
+              state: { successMessage: msg },
+            });
+          }
         }, 1000);
       } else {
         setErrorMessage(
@@ -752,7 +758,13 @@ export default function AddMicrocredentialCourseTopic() {
           {/* Back Button */}
           <button
             type="button"
-            onClick={() => navigate("/microcredential/topic-list")}
+            onClick={() => {
+              if (selectedModuleId) {
+                navigate(`/microcredential/module-topics/${selectedModuleId}`);
+              } else {
+                navigate("/microcredential/module-list");
+              }
+            }}
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/90 px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:border-gray-300 hover:bg-gray-100 active:scale-95 transition dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <svg
@@ -1210,7 +1222,13 @@ export default function AddMicrocredentialCourseTopic() {
             {/* Cancel Button */}
             <button
               type="button"
-              onClick={() => navigate("/microcredential/topic-list")}
+              onClick={() => {
+                if (selectedModuleId) {
+                  navigate(`/microcredential/module-topics/${selectedModuleId}`);
+                } else {
+                  navigate("/microcredential/module-list");
+                }
+              }}
               disabled={saving}
               className="rounded-lg bg-[#2D3748] px-6 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-gray-700 active:scale-95 transition disabled:opacity-50 dark:bg-gray-700 dark:hover:bg-gray-600"
             >

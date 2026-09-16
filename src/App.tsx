@@ -36,7 +36,6 @@ import {
   CourseModuleDetailList,
 } from "./components/MicrocredentialModule";
 import {
-  MicrocredentialTopicList,
   AddMicrocredentialCourseTopic,
   EditMicrocredentialCourseTopic,
   CommonDiscussion,
@@ -132,7 +131,7 @@ export default function App() {
             />
             <Route
               path="/microcredential/topic-list"
-              element={<MicrocredentialTopicList />}
+              element={<Navigate to="/microcredential/module-list" replace />}
             />
             <Route
               path="/microcredential/topic-add"

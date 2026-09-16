@@ -10,7 +10,6 @@ import {
 import {
   BookOpenIcon,
   FolderMenuIcon,
-  ListCheckIcon,
   HelpCircleIcon,
   UserCheckIcon,
   MedalAwardIcon,
@@ -23,6 +22,7 @@ import {
   ZoomMeetingIcon,
   GoogleGIcon,
   DesktopMonitorIcon,
+  ToolIcon,
 } from "../icons/menuIcons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -56,11 +56,6 @@ const navItems: NavItem[] = [
     name: "Microcredential Module List",
     path: "/microcredential/module-list",
     icon: <FolderMenuIcon className="w-5 h-5" />,
-  },
-  {
-    name: "Microcredential Topic List",
-    path: "/microcredential/topic-list",
-    icon: <ListCheckIcon className="w-5 h-5" />,
   },
   {
     name: "Common Discussion",
@@ -117,19 +112,25 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Zoom Meeting List",
-    path: "/zoom-meeting-list",
-    icon: <ZoomMeetingIcon className="w-5 h-5" />,
-  },
-  {
-    name: "Google Calender List",
-    path: "/google-calender-list",
-    icon: <GoogleGIcon className="w-5 h-5" />,
-  },
-  {
-    name: "Google Meet List",
-    path: "/google-meet-list",
-    icon: <DesktopMonitorIcon className="w-5 h-5" />,
+    name: "Tool",
+    icon: <ToolIcon className="w-5 h-5" />,
+    subItems: [
+      {
+        name: "Zoom Meeting List",
+        path: "/zoom-meeting-list",
+        icon: <ZoomMeetingIcon className="w-4 h-4" />,
+      },
+      {
+        name: "Google Calender List",
+        path: "/google-calender-list",
+        icon: <GoogleGIcon className="w-4 h-4" />,
+      },
+      {
+        name: "Google Meet List",
+        path: "/google-meet-list",
+        icon: <DesktopMonitorIcon className="w-4 h-4" />,
+      },
+    ],
   },
 ];
 
@@ -190,8 +191,8 @@ const AppSidebar: React.FC = () => {
               <button
                 onClick={() => handleToggle(index)}
                 className={`menu-item group ${itemActive || isParentOpen
-                    ? "menu-item-active"
-                    : "menu-item-inactive"
+                  ? "menu-item-active"
+                  : "menu-item-inactive"
                   } cursor-pointer ${!isExpanded && !isHovered
                     ? "lg:justify-center"
                     : "lg:justify-start"
@@ -199,8 +200,8 @@ const AppSidebar: React.FC = () => {
               >
                 <span
                   className={`menu-item-icon-size ${itemActive || isParentOpen
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
+                    ? "menu-item-icon-active"
+                    : "menu-item-icon-inactive"
                     }`}
                 >
                   {nav.icon}
@@ -228,8 +229,8 @@ const AppSidebar: React.FC = () => {
                 >
                   <span
                     className={`menu-item-icon-size ${isActive(nav.path)
-                        ? "menu-item-icon-active"
-                        : "menu-item-icon-inactive"
+                      ? "menu-item-icon-active"
+                      : "menu-item-icon-inactive"
                       }`}
                   >
                     {nav.icon}
@@ -258,8 +259,8 @@ const AppSidebar: React.FC = () => {
                         to={subItem.path}
                         onClick={() => isMobileOpen && toggleMobileSidebar()}
                         className={`menu-dropdown-item flex items-center justify-between ${isActive(subItem.path)
-                            ? "menu-dropdown-item-active"
-                            : "menu-dropdown-item-inactive"
+                          ? "menu-dropdown-item-active"
+                          : "menu-dropdown-item-inactive"
                           }`}
                       >
                         <span className="flex items-center gap-2.5 truncate">
@@ -307,7 +308,7 @@ const AppSidebar: React.FC = () => {
         <Link to="/">
           {isExpanded || isHovered || isMobileOpen ? (
             <img
-              src="/Ignitoverse Logonew.png"
+              src="/newlg.png"
               alt="Ignitoverse Logo"
               className="h-10 w-auto max-w-[190px] object-contain"
             />
@@ -326,8 +327,8 @@ const AppSidebar: React.FC = () => {
             <div>
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${!isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
+                  ? "lg:justify-center"
+                  : "justify-start"
                   }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (

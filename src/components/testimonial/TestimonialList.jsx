@@ -473,7 +473,7 @@ export default function TestimonialList({
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   e.target.onerror = null;
-                                  e.target.src = "/Ignitoverse Logonew.png";
+                                  e.target.src = "/newlg.png";
                                 }}
                               />
                             ) : (

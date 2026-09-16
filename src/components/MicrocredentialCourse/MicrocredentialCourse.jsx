@@ -431,8 +431,8 @@ export default function MicrocredentialCourse() {
     return (
       <span
         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${isActive
-            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-            : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
           }`}
       >
         <span
@@ -856,7 +856,7 @@ export default function MicrocredentialCourse() {
                               className="size-11 shrink-0 rounded-lg border border-gray-200 object-cover p-0.5 shadow-xs dark:border-gray-700"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse Logonew.png";
+                                e.target.src = "/newlg.png";
                               }}
                             />
                           ) : (
@@ -1094,8 +1094,8 @@ export default function MicrocredentialCourse() {
                       type="button"
                       onClick={() => setCurrentPage(pageNum)}
                       className={`min-w-[32px] rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive
-                          ? "bg-brand-500 text-white shadow-xs"
-                          : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        ? "bg-brand-500 text-white shadow-xs"
+                        : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                         }`}
                     >
                       {pageNum}
@@ -1326,7 +1326,7 @@ export default function MicrocredentialCourse() {
                     className="max-h-72 max-w-full rounded-xl border border-gray-200 object-contain shadow-xs dark:border-gray-700"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/Ignitoverse Logonew.png";
+                      e.target.src = "/newlg.png";
                     }}
                   />
                   {activeModalCourse.certificateName && (

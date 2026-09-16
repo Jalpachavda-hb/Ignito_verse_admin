@@ -380,7 +380,7 @@ export default function CourseModuleDetailList() {
                               className="size-full object-cover"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "/Ignitoverse Logonew.png";
+                                e.target.src = "/newlg.png";
                               }}
                             />
                           </button>
