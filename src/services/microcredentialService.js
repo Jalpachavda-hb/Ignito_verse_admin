@@ -290,9 +290,10 @@ export async function getStudentEnrolledMicrocredentialCourse(
         return parseGetStudentEnrolledMicrocredentialCourseErrorOutput({ message: error.message }, 500);
     }
 }
-
-
-
-
+// Export Google Calendar Event services
+export {
+  createGoogleCalendarEvent,
+  getGoogleCalendarEventList,
+} from './microcredentialGoogleCalendarService';
 
 

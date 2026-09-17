@@ -48,6 +48,13 @@ import {
   MicrocredentialQuizResult,
   MicrocredentialCheckpointQuizReport,
 } from "./components/MicrocredentialQuiz";
+import GoogleMeetList from "./components/GoogleMeet/GoogleMeetList";
+import CreateGoogleMeet from "./components/GoogleMeet/CreateGoogleMeet";
+import EditGoogleMeet from "./components/GoogleMeet/EditGoogleMeet";
+import GoogleCalendarList from "./components/GoogleCalendar/GoogleCalendarList";
+import CreateGoogleCalendarEvent from "./components/GoogleCalendar/CreateGoogleCalendarEvent";
+import ZoomMeetingList from "./components/ZoomMeeting/ZoomMeetingList";
+import CreateZoomMeeting from "./components/ZoomMeeting/CreateZoomMeeting";
 
 export default function App() {
   return (
@@ -301,19 +308,35 @@ export default function App() {
             {/* Meetings & Calendar Routes */}
             <Route
               path="/zoom-meeting-list"
-              element={<PlaceholderPage title="Zoom Meeting List" />}
+              element={<ZoomMeetingList />}
+            />
+            <Route
+              path="/create-zoom-meeting"
+              element={<CreateZoomMeeting />}
             />
             <Route
               path="/google-calender-list"
-              element={<PlaceholderPage title="Google Calender List" />}
+              element={<GoogleCalendarList />}
             />
             <Route
               path="/google-calendar-list"
-              element={<PlaceholderPage title="Google Calender List" />}
+              element={<GoogleCalendarList />}
+            />
+            <Route
+              path="/create-google-calendar-event"
+              element={<CreateGoogleCalendarEvent />}
             />
             <Route
               path="/google-meet-list"
-              element={<PlaceholderPage title="Google Meet List" />}
+              element={<GoogleMeetList />}
+            />
+            <Route
+              path="/create-google-meet"
+              element={<CreateGoogleMeet />}
+            />
+            <Route
+              path="/edit-google-meet/:id"
+              element={<EditGoogleMeet />}
             />
           </Route>
           </Route>
