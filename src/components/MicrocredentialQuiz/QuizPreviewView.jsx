@@ -26,6 +26,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
             questionsId: item.questionsId || item.questionId || index + 1,
             question: item.question || item.questionText || `Question ${index + 1}`,
             points: item.points || 1,
+            degreeQuestionType: item.degreeQuestionType || item.questionTypeId || 1,
             correctAnswerIndex: item.correctAnswerIndex ?? 0,
             explanation: item.explanation || "",
             options: Array.isArray(item.options) ? item.options : []
@@ -64,6 +65,21 @@ export default function QuizPreviewView({ quiz, onExit }) {
   const totalPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0);
   const quizTitle = quiz?.quizTitle || quiz?.QuizTitle || "Microcredential Quiz Preview";
 
+  const QUESTION_TYPE_NAMES = {
+    1: "Multiple Choice",
+    2: "True / False",
+    3: "Fill in the Blank",
+    4: "Multi-Select",
+    5: "Matching",
+    6: "Ordering",
+    7: "Written Response",
+    8: "Short Answer",
+    9: "Arithmetic",
+    10: "Significant Figures",
+    11: "Multi Short Answer",
+    12: "Likert Scale",
+  };
+
   return (
     <div className="w-full bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
       {/* Top Sticky Header */}
@@ -83,6 +99,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
               {quizTitle}
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
+              {quiz?.moduleName ? `${quiz.moduleName} • ` : ""}
               {quiz?.microcredentialName || quiz?.streamName || "Microcredential Assessment Module"}
             </p>
           </div>
@@ -191,9 +208,16 @@ export default function QuizPreviewView({ quiz, onExit }) {
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 dark:border-gray-700/60">
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        Question {idx + 1}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                          Question {idx + 1}
+                        </span>
+                        {q.degreeQuestionType && (
+                          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:border-brand-800/60">
+                            {QUESTION_TYPE_NAMES[q.degreeQuestionType] || `Type ${q.degreeQuestionType}`}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
                         ({q.points || 1} point)
                       </span>

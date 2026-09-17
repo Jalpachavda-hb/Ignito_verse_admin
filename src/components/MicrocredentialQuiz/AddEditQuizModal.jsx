@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { CloseIcon, CheckCircleIcon, AlertIcon } from "../../icons";
 import {
-  getEducationType,
   getStreamsDropdown,
   getMicrocredentialCoursesByStream,
+  getMicrocredentialModuleByCourseId,
   getMicrocredentialQuizCategoryList,
   saveDegreeQuizMaster,
   finalizeDegreeQuiz
@@ -25,9 +25,10 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
   };
 
   // Dropdown options
-  const [educationTypes, setEducationTypes] = useState([]);
   const [streams, setStreams] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [loadingModules, setLoadingModules] = useState(false);
   const [categories, setCategories] = useState([]);
 
   // Form State
@@ -36,6 +37,7 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
     educationTypeId: 2, // Microcredential
     streamId: 0,
     microcredentialCourseId: 0,
+    microcredentialModuleMasterId: 0,
     yearRange: "2026 - 2027",
     quizTitle: "",
     gradeOutOf: 10,
@@ -78,17 +80,10 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
 
     async function loadDropdowns() {
       try {
-        const [eduRes, streamRes, catRes] = await Promise.all([
-          getEducationType(),
+        const [streamRes, catRes] = await Promise.all([
           getStreamsDropdown(),
           getMicrocredentialQuizCategoryList()
         ]);
-
-        if (eduRes?.success && Array.isArray(eduRes.educationList)) {
-          setEducationTypes(eduRes.educationList);
-        } else {
-          setEducationTypes([{ educationTypeId: 2, educationTypeName: "Microcredential Courses" }]);
-        }
 
         if (streamRes?.success && Array.isArray(streamRes.streamDataList)) {
           setStreams(streamRes.streamDataList);
@@ -130,6 +125,32 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
     loadCourses();
   }, [formData.streamId]);
 
+  // Load modules when course changes
+  useEffect(() => {
+    async function loadModules() {
+      if (!formData.microcredentialCourseId) {
+        setModules([]);
+        return;
+      }
+      setLoadingModules(true);
+      try {
+        const res = await getMicrocredentialModuleByCourseId(formData.microcredentialCourseId);
+        if (res?.success && Array.isArray(res.microcredentialModuleList)) {
+          setModules(res.microcredentialModuleList);
+        } else {
+          setModules([]);
+        }
+      } catch (err) {
+        console.warn("Error fetching modules for course:", err);
+        setModules([]);
+      } finally {
+        setLoadingModules(false);
+      }
+    }
+
+    loadModules();
+  }, [formData.microcredentialCourseId]);
+
   // Prefill if editing, or reset if adding
   useEffect(() => {
     if (!isOpen) return;
@@ -153,6 +174,8 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
         streamId: Number(resolvedStreamId) || 0,
         microcredentialCourseId:
           editQuiz.microcredentialCourseId || editQuiz.MicrocredentialCourseId || 0,
+        microcredentialModuleMasterId:
+          editQuiz.microcredentialModuleMasterId || editQuiz.MicrocredentialModuleMasterId || 0,
         yearRange: editQuiz.yearRange || "2026 - 2027",
         quizTitle: editQuiz.quizTitle || editQuiz.QuizTitle || "",
         gradeOutOf: editQuiz.gradeOutOf ?? editQuiz.GradeOutOf ?? 10,
@@ -192,6 +215,7 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
         educationTypeId: 2,
         streamId: 0,
         microcredentialCourseId: 0,
+        microcredentialModuleMasterId: 0,
         yearRange: "2026 - 2027",
         quizTitle: "",
         gradeOutOf: 10,
@@ -326,73 +350,89 @@ export default function AddEditQuizModal({ isOpen, onClose, onQuizSaved, editQui
                 1. Quiz Setup & Course Details
               </h4>
 
-              {/* Education Type & Stream */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Education Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.educationTypeId}
-                    onChange={(e) => handleChange("educationTypeId", Number(e.target.value))}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                  >
-                    {educationTypes.map((ed) => (
-                      <option key={ed.educationTypeId} value={ed.educationTypeId}>
-                        {ed.educationTypeName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Stream <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.streamId}
-                    onChange={(e) => handleChange("streamId", Number(e.target.value))}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                  >
-                    <option value={0}>Select Stream...</option>
-                    {streams.map((s) => (
-                      <option key={s.streamId} value={s.streamId}>
-                        {s.streamName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Stream */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Stream <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.streamId}
+                  onChange={(e) => handleChange("streamId", Number(e.target.value))}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value={0}>Select Stream...</option>
+                  {streams.map((s) => (
+                    <option key={s.streamId} value={s.streamId}>
+                      {s.streamName}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Microcredential Course */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Microcredential Course <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.microcredentialCourseId}
-                  onChange={(e) => handleChange("microcredentialCourseId", Number(e.target.value))}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                >
-                  <option value={0}>
-                    {formData.streamId ? "Select Course..." : "Select Stream First"}
-                  </option>
-                  {courses.map((c) => (
-                    <option key={c.microcredentialCourseId} value={c.microcredentialCourseId}>
-                      {c.microcredentialCourseName}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Microcredential Course <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.microcredentialCourseId}
+                    onChange={(e) => handleChange("microcredentialCourseId", Number(e.target.value))}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <option value={0}>
+                      {formData.streamId ? "Select Course..." : "Select Stream First"}
                     </option>
-                  ))}
-                  {formData.microcredentialCourseId > 0 &&
-                    !courses.some(
-                      (c) => Number(c.microcredentialCourseId) === Number(formData.microcredentialCourseId)
-                    ) && (
-                      <option value={formData.microcredentialCourseId}>
-                        {editQuiz?.microcredentialCourseName ||
-                          editQuiz?.microcredentialName ||
-                          `Course #${formData.microcredentialCourseId}`}
+                    {courses.map((c) => (
+                      <option key={c.microcredentialCourseId} value={c.microcredentialCourseId}>
+                        {c.microcredentialCourseName}
                       </option>
-                    )}
-                </select>
+                    ))}
+                    {formData.microcredentialCourseId > 0 &&
+                      !courses.some(
+                        (c) => Number(c.microcredentialCourseId) === Number(formData.microcredentialCourseId)
+                      ) && (
+                        <option value={formData.microcredentialCourseId}>
+                          {editQuiz?.microcredentialCourseName ||
+                            editQuiz?.microcredentialName ||
+                            `Course #${formData.microcredentialCourseId}`}
+                        </option>
+                      )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Microcredential Module <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.microcredentialModuleMasterId}
+                    onChange={(e) => handleChange("microcredentialModuleMasterId", Number(e.target.value))}
+                    disabled={loadingModules}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 disabled:opacity-50"
+                  >
+                    <option value={0}>
+                      {loadingModules
+                        ? "Loading modules..."
+                        : formData.microcredentialCourseId
+                        ? "Select Module..."
+                        : "Select Course First"}
+                    </option>
+                    {modules.map((m) => (
+                      <option key={m.microcredentialModuleMasterId} value={m.microcredentialModuleMasterId}>
+                        {m.moduleName}
+                      </option>
+                    ))}
+                    {formData.microcredentialModuleMasterId > 0 &&
+                      !modules.some(
+                        (m) => Number(m.microcredentialModuleMasterId) === Number(formData.microcredentialModuleMasterId)
+                      ) && (
+                        <option value={formData.microcredentialModuleMasterId}>
+                          {editQuiz?.moduleName || `Module #${formData.microcredentialModuleMasterId}`}
+                        </option>
+                      )}
+                  </select>
+                </div>
               </div>
 
               {/* Year Range & Quiz Title */}

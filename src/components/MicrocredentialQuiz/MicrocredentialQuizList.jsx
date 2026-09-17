@@ -21,6 +21,7 @@ import {
 } from "../../services/AdminQuizPageService";
 
 import QuizPreviewView from "./QuizPreviewView";
+import QuestionMasterModal from "./QuestionMasterModal";
 
 export default function MicrocredentialQuizList() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function MicrocredentialQuizList() {
   const [filterCreater, setFilterCreater] = useState("");
   const [filterStream, setFilterStream] = useState("");
   const [filterMicrocredential, setFilterMicrocredential] = useState("");
+  const [filterModule, setFilterModule] = useState("");
   const [filterDueDate, setFilterDueDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -57,6 +59,7 @@ export default function MicrocredentialQuizList() {
 
   // Modals & Preview States
   const [previewingQuiz, setPreviewingQuiz] = useState(null);
+  const [questionManagerQuiz, setQuestionManagerQuiz] = useState(null);
 
   // Small Popups
   const [viewingDescriptionQuiz, setViewingDescriptionQuiz] = useState(null);
@@ -89,6 +92,7 @@ export default function MicrocredentialQuizList() {
         quizTitle: filterTitle.trim(),
         stream: filterStream.trim(),
         microcredentialName: filterMicrocredential.trim(),
+        microcredentialModuleMasterId: Number(filterModule) || 0,
         quizCreaterName: filterCreater.trim(),
         dueDate: filterDueDate
       };
@@ -96,7 +100,7 @@ export default function MicrocredentialQuizList() {
       const res = await fetchPaginatedMicrocredentialQuizList(payload);
 
       if (res && res.success !== false) {
-        const list = res.quizDegreeList || [];
+        const list = res.quizDegreeList || res.degreeQuizList || [];
         setQuizzes(list);
         setTotalRecords(res.pageDetail?.totalRecords || res.totalRecords || list.length);
       } else {
@@ -110,7 +114,7 @@ export default function MicrocredentialQuizList() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortConfig, searchQuery, filterTitle, filterCreater, filterStream, filterMicrocredential, filterDueDate]);
+  }, [currentPage, pageSize, sortConfig, searchQuery, filterTitle, filterCreater, filterStream, filterMicrocredential, filterModule, filterDueDate]);
 
   useEffect(() => {
     loadQuizzes();
@@ -131,6 +135,7 @@ export default function MicrocredentialQuizList() {
     setFilterCreater("");
     setFilterStream("");
     setFilterMicrocredential("");
+    setFilterModule("");
     setFilterDueDate("");
     setSearchQuery("");
     setCurrentPage(1);
@@ -328,7 +333,7 @@ export default function MicrocredentialQuizList() {
 
         {/* Filter Input Grid */}
         <form onSubmit={handleFilterSubmit} className="mt-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Quiz Title */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
@@ -374,13 +379,27 @@ export default function MicrocredentialQuizList() {
             {/* Microcredential Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Microcredential Name
+                Course Name
               </label>
               <input
                 type="text"
                 value={filterMicrocredential}
                 onChange={(e) => setFilterMicrocredential(e.target.value)}
-                placeholder="Microcredential name"
+                placeholder="Course name"
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              />
+            </div>
+
+            {/* Module Filter */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Module ID / Filter
+              </label>
+              <input
+                type="number"
+                value={filterModule}
+                onChange={(e) => setFilterModule(e.target.value)}
+                placeholder="Module ID"
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               />
             </div>
@@ -469,6 +488,10 @@ export default function MicrocredentialQuizList() {
                   </div>
                 </th>
 
+                <th className="px-5 py-3.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300">
+                  Module
+                </th>
+
                 <th
                   onClick={() => handleSort("GradeOutOf")}
                   className="cursor-pointer px-5 py-3.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-brand-500"
@@ -510,14 +533,14 @@ export default function MicrocredentialQuizList() {
             <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-transparent">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                  <td colSpan={8} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
                     <div className="inline-block size-6 animate-spin rounded-full border-3 border-brand-500 border-t-transparent mb-2" />
                     <div>Loading quizzes...</div>
                   </td>
                 </tr>
               ) : quizzes.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                  <td colSpan={8} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
                     No microcredential quizzes found. Click <strong>+ Add New Quiz</strong> to create one.
                   </td>
                 </tr>
@@ -525,6 +548,7 @@ export default function MicrocredentialQuizList() {
                 quizzes.map((quiz) => {
                   const qId = quiz.quizId || quiz.QuizId || 0;
                   const isActive = Boolean(quiz.isActive ?? quiz.IsActive);
+                  const moduleName = quiz.moduleName || quiz.ModuleName || "";
 
                   return (
                     <tr
@@ -537,8 +561,19 @@ export default function MicrocredentialQuizList() {
                           {quiz.quizTitle || quiz.QuizTitle || "Untitled Quiz"}
                         </div>
                         <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
-                          {quiz.microcredentialName || quiz.streamName || "Microcredential Course"}
+                          {quiz.microcredentialCourseName || quiz.microcredentialName || quiz.streamName || "Microcredential Course"}
                         </div>
+                      </td>
+
+                      {/* Module */}
+                      <td className="px-5 py-4">
+                        {moduleName ? (
+                          <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/40">
+                            {moduleName}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
 
                       {/* GradeOutOf */}
@@ -590,9 +625,20 @@ export default function MicrocredentialQuizList() {
                         </button>
                       </td>
 
-                      {/* Actions: Print, View Preview, Edit, Delete */}
+                      {/* Actions: Questions, Print, View Preview, Edit, Delete */}
                       <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          {/* Manage Questions (All 12 Types) */}
+                          <button
+                            type="button"
+                            onClick={() => setQuestionManagerQuiz(quiz)}
+                            title="Manage Questions (12 Types)"
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
+                          >
+                            <span>📝</span>
+                            <span className="hidden xl:inline">Questions</span>
+                          </button>
+
                           {/* Print */}
                           <button
                             type="button"
@@ -900,6 +946,14 @@ export default function MicrocredentialQuizList() {
           </div>
         </div>
       )}
+
+      {/* 7. Question Master Modal (12 Question Types) */}
+      <QuestionMasterModal
+        isOpen={Boolean(questionManagerQuiz)}
+        quiz={questionManagerQuiz}
+        onClose={() => setQuestionManagerQuiz(null)}
+        onQuestionsUpdated={loadQuizzes}
+      />
     </div>
   );
 }

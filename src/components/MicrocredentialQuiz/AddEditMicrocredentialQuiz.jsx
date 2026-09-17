@@ -9,14 +9,16 @@ import {
   AngleLeftIcon,
 } from "../../icons";
 import {
-  getEducationType,
   getStreamsDropdown,
   getMicrocredentialCoursesByStream,
+  getMicrocredentialModuleByCourseId,
   getMicrocredentialQuizCategoryList,
   saveDegreeQuizMaster,
+  getDegreeQuizDetailsByQuizId,
   finalizeDegreeQuiz,
   fetchPaginatedMicrocredentialQuizList,
 } from "../../services/AdminQuizPageService";
+import QuestionMasterModal from "./QuestionMasterModal";
 
 export default function AddEditMicrocredentialQuiz() {
   const navigate = useNavigate();
@@ -29,14 +31,16 @@ export default function AddEditMicrocredentialQuiz() {
   // Loading & notification states
   const [loadingInitial, setLoadingInitial] = useState(false);
   const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingModules, setLoadingModules] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
 
   // Dropdown options
-  const [educationTypes, setEducationTypes] = useState([]);
   const [streams, setStreams] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [modules, setModules] = useState([]);
   const [categories, setCategories] = useState([]);
 
   // Form State
@@ -45,6 +49,7 @@ export default function AddEditMicrocredentialQuiz() {
     educationTypeId: 2, // Microcredential Courses
     streamId: 0,
     microcredentialCourseId: 0,
+    microcredentialModuleMasterId: 0,
     yearRange: "2026 - 2027",
     quizTitle: "",
     gradeOutOf: 10,
@@ -83,21 +88,12 @@ export default function AddEditMicrocredentialQuiz() {
 
     async function loadDropdowns() {
       try {
-        const [eduRes, streamRes, catRes] = await Promise.all([
-          getEducationType(),
+        const [streamRes, catRes] = await Promise.all([
           getStreamsDropdown(),
           getMicrocredentialQuizCategoryList(),
         ]);
 
         if (!isMounted) return;
-
-        if (eduRes?.success && Array.isArray(eduRes.educationList)) {
-          setEducationTypes(eduRes.educationList);
-        } else {
-          setEducationTypes([
-            { educationTypeId: 2, educationTypeName: "Microcredential Courses" },
-          ]);
-        }
 
         if (streamRes?.success && Array.isArray(streamRes.streamDataList)) {
           setStreams(streamRes.streamDataList);
@@ -133,6 +129,19 @@ export default function AddEditMicrocredentialQuiz() {
 
     async function loadExistingQuizData() {
       setLoadingInitial(true);
+
+      // Primary source: getDegreeQuizDetailsByQuizId
+      try {
+        const detailRes = await getDegreeQuizDetailsByQuizId(quizIdParam);
+        if (isMounted && detailRes?.success && detailRes.quizDetails) {
+          applyQuizData(detailRes.quizDetails);
+          setLoadingInitial(false);
+          return;
+        }
+      } catch (dErr) {
+        console.warn("getDegreeQuizDetailsByQuizId failed, trying fallback:", dErr);
+      }
+
       const stateQuiz = location.state?.quiz || location.state?.item;
 
       if (stateQuiz) {
@@ -149,8 +158,9 @@ export default function AddEditMicrocredentialQuiz() {
           educationTypeId: 2,
         });
 
-        if (isMounted && res?.quizDegreeList) {
-          const found = res.quizDegreeList.find(
+        if (isMounted && (res?.quizDegreeList || res?.degreeQuizList)) {
+          const list = res.quizDegreeList || res.degreeQuizList || [];
+          const found = list.find(
             (q) => Number(q.quizId || q.QuizId) === Number(quizIdParam)
           );
           if (found) {
@@ -181,7 +191,9 @@ export default function AddEditMicrocredentialQuiz() {
         educationTypeId: q.educationTypeId || q.EducationTypeId || 2,
         streamId: Number(resolvedStreamId) || prev.streamId || 0,
         microcredentialCourseId:
-          q.microcredentialCourseId || q.MicrocredentialCourseId || 0,
+          Number(q.microcredentialCourseId || q.MicrocredentialCourseId || 0),
+        microcredentialModuleMasterId:
+          Number(q.microcredentialModuleMasterId || q.MicrocredentialModuleMasterId || 0),
         yearRange: q.yearRange || "2026 - 2027",
         quizTitle: q.quizTitle || q.QuizTitle || "",
         gradeOutOf: q.gradeOutOf ?? q.GradeOutOf ?? 10,
@@ -254,6 +266,38 @@ export default function AddEditMicrocredentialQuiz() {
     };
   }, [formData.streamId]);
 
+  // Load modules when microcredentialCourseId changes
+  useEffect(() => {
+    if (!formData.microcredentialCourseId) {
+      setModules([]);
+      return;
+    }
+
+    let isMounted = true;
+    async function loadModules() {
+      setLoadingModules(true);
+      try {
+        const res = await getMicrocredentialModuleByCourseId(formData.microcredentialCourseId);
+        if (isMounted && res?.success && Array.isArray(res.microcredentialModuleList)) {
+          setModules(res.microcredentialModuleList);
+        } else if (isMounted) {
+          setModules([]);
+        }
+      } catch (err) {
+        console.warn("Error fetching modules for course:", err);
+        if (isMounted) setModules([]);
+      } finally {
+        if (isMounted) setLoadingModules(false);
+      }
+    }
+
+    loadModules();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.microcredentialCourseId]);
+
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -264,6 +308,16 @@ export default function AddEditMicrocredentialQuiz() {
       ...prev,
       streamId: sId,
       microcredentialCourseId: 0,
+      microcredentialModuleMasterId: 0,
+    }));
+  };
+
+  const handleCourseChange = (e) => {
+    const cId = Number(e.target.value);
+    setFormData((prev) => ({
+      ...prev,
+      microcredentialCourseId: cId,
+      microcredentialModuleMasterId: 0,
     }));
   };
 
@@ -365,7 +419,18 @@ export default function AddEditMicrocredentialQuiz() {
           </p>
         </div>
 
-        <div>
+        <div className="flex items-center gap-2.5">
+          {formData.quizId > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsQuestionModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 shadow-xs hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
+            >
+              <span>📝</span>
+              <span>Manage Questions (12 Types)</span>
+            </button>
+          )}
+
           <Link
             to="/microcredential/quiz"
             className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition"
@@ -410,32 +475,14 @@ export default function AddEditMicrocredentialQuiz() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Course Association & Basic Quiz Details */}
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">
-            1. Quiz Details & Course Association
+          <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">
+            1. Quiz Details, Course & Module Association
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">
-            Select the education type, stream, and microcredential course for this quiz.
+            Select the stream, microcredential course, and specific module for this quiz.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Education Type */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Education Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.educationTypeId}
-                onChange={(e) => handleChange("educationTypeId", Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              >
-                {educationTypes.map((ed) => (
-                  <option key={ed.educationTypeId} value={ed.educationTypeId}>
-                    {ed.educationTypeName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Stream */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -462,7 +509,7 @@ export default function AddEditMicrocredentialQuiz() {
               </label>
               <select
                 value={formData.microcredentialCourseId}
-                onChange={(e) => handleChange("microcredentialCourseId", Number(e.target.value))}
+                onChange={handleCourseChange}
                 disabled={loadingCourses}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
               >
@@ -484,6 +531,40 @@ export default function AddEditMicrocredentialQuiz() {
                   ) && (
                     <option value={formData.microcredentialCourseId}>
                       Course #{formData.microcredentialCourseId}
+                    </option>
+                  )}
+              </select>
+            </div>
+
+            {/* Microcredential Module */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Microcredential Module <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.microcredentialModuleMasterId}
+                onChange={(e) => handleChange("microcredentialModuleMasterId", Number(e.target.value))}
+                disabled={loadingModules}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+              >
+                <option value={0}>
+                  {loadingModules
+                    ? "Loading modules..."
+                    : formData.microcredentialCourseId
+                    ? "-- Select Module --"
+                    : "-- Select Course First --"}
+                </option>
+                {modules.map((m) => (
+                  <option key={m.microcredentialModuleMasterId} value={m.microcredentialModuleMasterId}>
+                    {m.moduleName}
+                  </option>
+                ))}
+                {formData.microcredentialModuleMasterId > 0 &&
+                  !modules.some(
+                    (m) => Number(m.microcredentialModuleMasterId) === Number(formData.microcredentialModuleMasterId)
+                  ) && (
+                    <option value={formData.microcredentialModuleMasterId}>
+                      Module #{formData.microcredentialModuleMasterId}
                     </option>
                   )}
               </select>
@@ -902,6 +983,20 @@ export default function AddEditMicrocredentialQuiz() {
           </button>
         </div>
       </form>
+
+      {/* Question Master Modal */}
+      {formData.quizId > 0 && (
+        <QuestionMasterModal
+          isOpen={isQuestionModalOpen}
+          quiz={{
+            quizId: formData.quizId,
+            quizTitle: formData.quizTitle || "Quiz",
+            moduleName: modules.find(m => Number(m.microcredentialModuleMasterId) === Number(formData.microcredentialModuleMasterId))?.moduleName || "",
+            totalQuestions: 0,
+          }}
+          onClose={() => setIsQuestionModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

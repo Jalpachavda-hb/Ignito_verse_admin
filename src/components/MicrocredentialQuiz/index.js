@@ -8,3 +8,4 @@ export { default as AddMicrocredentialQuiz } from './AddEditMicrocredentialQuiz'
 export { default as EditMicrocredentialQuiz } from './AddEditMicrocredentialQuiz';
 export { default as AddEditQuizModal } from './AddEditQuizModal';
 export { default as StudentQuizResponseModal } from './StudentQuizResponseModal';
+export { default as QuestionMasterModal } from './QuestionMasterModal';

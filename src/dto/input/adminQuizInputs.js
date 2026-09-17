@@ -36,8 +36,13 @@ export function buildMainDegreeQuizListInput(params = {}) {
         microcredentialName = '',
         quizCreaterName = '',
         dueDate = '',
-        adminId = 0
+        adminId = 0,
+        microcredentialCourseId = 0,
+        microcredentialModuleMasterId = 0
     } = opts;
+
+    const cleanCourseId = Number(microcredentialCourseId ?? opts.MicrocredentialCourseId ?? 0);
+    const cleanModuleId = Number(microcredentialModuleMasterId ?? opts.MicrocredentialModuleMasterId ?? 0);
 
     return {
         headers: {
@@ -58,7 +63,11 @@ export function buildMainDegreeQuizListInput(params = {}) {
             quizCreaterName: quizCreaterName || '',
             dueDate: dueDate || '',
             adminId: Number(adminId) || 0,
-            AdminId: Number(adminId) || 0
+            AdminId: Number(adminId) || 0,
+            MicrocredentialCourseId: cleanCourseId,
+            microcredentialCourseId: cleanCourseId,
+            MicrocredentialModuleMasterId: cleanModuleId,
+            microcredentialModuleMasterId: cleanModuleId
         })
     };
 }
@@ -172,6 +181,9 @@ export function buildDegreeQuizMasterAddUpdateInput(params = {}) {
     const yearRange = String(opts.yearRange ?? opts.YearRange ?? '');
     const createdBy = Number(opts.createdBy ?? opts.CreatedBy ?? opts.adminId ?? opts.AdminId ?? 0);
     const microcredentialCourseId = Number(opts.microcredentialCourseId ?? opts.MicrocredentialCourseId ?? 0);
+    const microcredentialModuleMasterId = Number(opts.microcredentialModuleMasterId ?? opts.MicrocredentialModuleMasterId ?? 0);
+    const freeCourseId = Number(opts.freeCourseId ?? opts.FreeCourseId ?? 0);
+    const courseTypeId = Number(opts.courseTypeId ?? opts.CourseTypeId ?? 0);
 
     return {
         headers: {
@@ -210,7 +222,33 @@ export function buildDegreeQuizMasterAddUpdateInput(params = {}) {
             CreatedBy: createdBy,
             createdBy: createdBy,
             MicrocredentialCourseId: microcredentialCourseId,
-            microcredentialCourseId: microcredentialCourseId
+            microcredentialCourseId: microcredentialCourseId,
+            MicrocredentialModuleMasterId: microcredentialModuleMasterId,
+            microcredentialModuleMasterId: microcredentialModuleMasterId,
+            FreeCourseId: freeCourseId,
+            freeCourseId: freeCourseId,
+            CourseTypeId: courseTypeId,
+            courseTypeId: courseTypeId
+        })
+    };
+}
+
+/**
+ * 2.5B Get Degree Quiz Details By Quiz ID Input
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId
+ */
+export function buildGetDegreeQuizDetailsByQuizIdInput(quizId = 0) {
+    const opts = normalizeOptions(quizId) || { quizId };
+    const cleanQuizId = Number(opts.quizId ?? opts.QuizId ?? 0);
+
+    return {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            QuizId: cleanQuizId,
+            quizId: cleanQuizId
         })
     };
 }
@@ -367,6 +405,172 @@ export function buildDeleteDegreeQuizQuestionsInput(quizId = 0, questionId = 0, 
             AdminId: cleanAdminId,
             adminId: cleanAdminId
         })
+    };
+}
+
+/**
+ * 2.9B Add / Update Degree Quiz Question Master Input
+ * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate
+ * Supports all 12 Question Types
+ */
+export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
+    const opts = normalizeOptions(params) || {};
+    const quizId = Number(opts.quizId ?? opts.QuizId ?? 0);
+    const adminId = Number(opts.adminId ?? opts.AdminId ?? 1);
+    const questionId = Number(opts.questionId ?? opts.QuestionId ?? 0);
+
+    const degreeQuestionType = Number(opts.degreeQuestionType ?? opts.DegreeQuestionType ?? 1);
+
+    // Master Question Record
+    const degreeQuestionList = Array.isArray(opts.degreeQuestionList ?? opts.DegreeQuestionList)
+        ? (opts.degreeQuestionList ?? opts.DegreeQuestionList)
+        : [
+            {
+                TempQuestionKey: 0,
+                DegreeQuestionType: degreeQuestionType,
+                Title: opts.title ?? opts.Title ?? '',
+                QuestionText: opts.questionText ?? opts.QuestionText ?? '',
+                QuestionFeedback: opts.questionFeedback ?? opts.QuestionFeedback ?? '',
+                Hint: opts.hint ?? opts.Hint ?? '',
+                ShortDescription: opts.shortDescription ?? opts.ShortDescription ?? '',
+                Enumeration: String(opts.enumeration ?? opts.Enumeration ?? '1'),
+                CustomWeights: String(opts.customWeights ?? opts.CustomWeights ?? ''),
+                Difficulty: Number(opts.difficulty ?? opts.Difficulty ?? 1),
+                AlternativeText: opts.alternativeText ?? opts.AlternativeText ?? '',
+                Points: Number(opts.points ?? opts.Points ?? 1),
+                RandomizeAnswers: Boolean(opts.randomizeAnswers ?? opts.RandomizeAnswers ?? false),
+                ImageUrl: opts.imageUrl ?? opts.ImageUrl ?? '',
+                HowPointAssignedToBlanks: opts.howPointAssignedToBlanks ?? opts.HowPointAssignedToBlanks ?? ''
+            }
+        ];
+
+    const payload = {
+        QuizId: quizId,
+        quizId: quizId,
+        AdminId: adminId,
+        adminId: adminId,
+        QuestionId: questionId,
+        questionId: questionId,
+        DegreeQuestionList: degreeQuestionList,
+        degreeQuestionList: degreeQuestionList
+    };
+
+    // Type 1, 2, 4: DegreeAnswerOptionList
+    const answerOptionList = opts.degreeAnswerOptionList ?? opts.DegreeAnswerOptionList;
+    if (Array.isArray(answerOptionList)) {
+        payload.DegreeAnswerOptionList = answerOptionList;
+        payload.degreeAnswerOptionList = answerOptionList;
+    }
+
+    // Type 3: Fill-in-the-Blank
+    const textComponents = opts.degreeQuestionTextComponentList ?? opts.DegreeQuestionTextComponentList;
+    if (Array.isArray(textComponents)) {
+        payload.DegreeQuestionTextComponentList = textComponents;
+        payload.degreeQuestionTextComponentList = textComponents;
+    }
+    const blankAnswers = opts.degreeBlankAnswerList ?? opts.DegreeBlankAnswerList;
+    if (Array.isArray(blankAnswers)) {
+        payload.DegreeBlankAnswerList = blankAnswers;
+        payload.degreeBlankAnswerList = blankAnswers;
+    }
+
+    // Type 5: Matching
+    const matchingQ = opts.degreeMatchingQuestionList ?? opts.DegreeMatchingQuestionList;
+    if (Array.isArray(matchingQ)) {
+        payload.DegreeMatchingQuestionList = matchingQ;
+        payload.degreeMatchingQuestionList = matchingQ;
+    }
+    const matchingChoices = opts.degreeMatchingChoiceList ?? opts.DegreeMatchingChoiceList;
+    if (Array.isArray(matchingChoices)) {
+        payload.DegreeMatchingChoiceList = matchingChoices;
+        payload.degreeMatchingChoiceList = matchingChoices;
+    }
+    const matchingPairs = opts.degreeMatchingPairList ?? opts.DegreeMatchingPairList;
+    if (Array.isArray(matchingPairs)) {
+        payload.DegreeMatchingPairList = matchingPairs;
+        payload.degreeMatchingPairList = matchingPairs;
+    }
+
+    // Type 6: Ordering
+    const orderingQ = opts.degreeOrderingQuestionList ?? opts.DegreeOrderingQuestionList;
+    if (Array.isArray(orderingQ)) {
+        payload.DegreeOrderingQuestionList = orderingQ;
+        payload.degreeOrderingQuestionList = orderingQ;
+    }
+    const orderingItems = opts.degreeOrderingItemList ?? opts.DegreeOrderingItemList;
+    if (Array.isArray(orderingItems)) {
+        payload.DegreeOrderingItemList = orderingItems;
+        payload.degreeOrderingItemList = orderingItems;
+    }
+
+    // Type 7: Written Response
+    const writtenSettings = opts.degreeWrittenResponseSettingList ?? opts.DegreeWrittenResponseSettingList;
+    if (Array.isArray(writtenSettings)) {
+        payload.DegreeWrittenResponseSettingList = writtenSettings;
+        payload.degreeWrittenResponseSettingList = writtenSettings;
+    }
+
+    // Type 8: Short Answer
+    const shortBlanks = opts.degreeShortAnswerBlankList ?? opts.DegreeShortAnswerBlankList;
+    if (Array.isArray(shortBlanks)) {
+        payload.DegreeShortAnswerBlankList = shortBlanks;
+        payload.degreeShortAnswerBlankList = shortBlanks;
+    }
+
+    // Type 9: Arithmetic
+    const arithmeticQ = opts.degreeArithmeticQuestionList ?? opts.DegreeArithmeticQuestionList;
+    if (Array.isArray(arithmeticQ)) {
+        payload.DegreeArithmeticQuestionList = arithmeticQ;
+        payload.degreeArithmeticQuestionList = arithmeticQ;
+    }
+    const arithmeticVars = opts.degreeArithmeticVariableList ?? opts.DegreeArithmeticVariableList;
+    if (Array.isArray(arithmeticVars)) {
+        payload.DegreeArithmeticVariableList = arithmeticVars;
+        payload.degreeArithmeticVariableList = arithmeticVars;
+    }
+
+    // Type 10: Significant Figures
+    const sigFigQ = opts.degreeSignificantFiguresQuestionList ?? opts.DegreeSignificantFiguresQuestionList;
+    if (Array.isArray(sigFigQ)) {
+        payload.DegreeSignificantFiguresQuestionList = sigFigQ;
+        payload.degreeSignificantFiguresQuestionList = sigFigQ;
+    }
+    const sigFigVars = opts.degreeSignificantFiguresVariableList ?? opts.DegreeSignificantFiguresVariableList;
+    if (Array.isArray(sigFigVars)) {
+        payload.DegreeSignificantFiguresVariableList = sigFigVars;
+        payload.degreeSignificantFiguresVariableList = sigFigVars;
+    }
+
+    // Type 11: Multi Short Answer
+    const multiAnswers = opts.degreeMultiShortAnswerList ?? opts.DegreeMultiShortAnswerList;
+    if (Array.isArray(multiAnswers)) {
+        payload.DegreeMultiShortAnswerList = multiAnswers;
+        payload.degreeMultiShortAnswerList = multiAnswers;
+    }
+    const inputBoxes = opts.degreeMultiShortAnswerInputBox ?? opts.DegreeMultiShortAnswerInputBox;
+    if (Array.isArray(inputBoxes)) {
+        payload.DegreeMultiShortAnswerInputBox = inputBoxes;
+        payload.degreeMultiShortAnswerInputBox = inputBoxes;
+    }
+
+    // Type 12: Likert Scale
+    const likertQ = opts.degreeLikertQuestionList ?? opts.DegreeLikertQuestionList;
+    if (Array.isArray(likertQ)) {
+        payload.DegreeLikertQuestionList = likertQ;
+        payload.degreeLikertQuestionList = likertQ;
+    }
+    const statements = opts.degreeLikertStatementList ?? opts.DegreeLikertStatementList;
+    if (Array.isArray(statements)) {
+        payload.DegreeLikertStatementList = statements;
+        payload.degreeLikertStatementList = statements;
+    }
+
+    return {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
     };
 }
 

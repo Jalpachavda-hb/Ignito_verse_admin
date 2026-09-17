@@ -17,10 +17,12 @@ import {
     buildGetEducationTypeInput,
     buildGetStreamByProgrammeInput,
     buildDegreeQuizMasterAddUpdateInput,
+    buildGetDegreeQuizDetailsByQuizIdInput,
     buildFinalizeDegreeQuizAddUpdateInput,
     buildDegreeQuizQuestionsListInput,
     buildActiveInactiveDegreeQuizQuestionsInput,
     buildDeleteDegreeQuizQuestionsInput,
+    buildDegreeQuizQuestionMasterAddUpdateInput,
     buildGetDegreeStudentsForSpecialQuizAccessInput,
     buildMicrocredentialQuizCategoryListInput,
     buildGetMicroCourseCheckpointQuizTopicDetailInput,
@@ -37,6 +39,7 @@ import { buildGetStreamDataInput } from '../dto/input/getStreamDataInput';
 import { buildGetMicrocredentialCourseInput } from '../dto/input/getMicrocredentialCourseInput';
 import { buildMicroCourseTopicListInput } from '../dto/input/microCourseTopicListInput';
 import { buildGetMicrocredentialStudentDownloadDocumentsInput } from '../dto/input/getMicrocredentialStudentDownloadDocumentsInput';
+import { getMicrocredentialModuleByCourseId } from './adminMicrocredentialService';
 
 // Outputs
 import {
@@ -52,10 +55,14 @@ import {
     parseGetStreamByProgrammeErrorOutput,
     parseDegreeQuizMasterAddUpdateOutput,
     parseDegreeQuizMasterAddUpdateErrorOutput,
+    parseGetDegreeQuizDetailsByQuizIdOutput,
+    parseGetDegreeQuizDetailsByQuizIdErrorOutput,
     parseFinalizeDegreeQuizAddUpdateOutput,
     parseFinalizeDegreeQuizAddUpdateErrorOutput,
     parseDegreeQuizQuestionsListOutput,
     parseDegreeQuizQuestionsListErrorOutput,
+    parseDegreeQuizQuestionMasterAddUpdateOutput,
+    parseDegreeQuizQuestionMasterAddUpdateErrorOutput,
     parseDegreeQuizQuestionActionOutput,
     parseDegreeQuizQuestionActionErrorOutput,
     parseGetDegreeStudentsForSpecialQuizAccessOutput,
@@ -406,6 +413,33 @@ export async function saveDegreeQuizMaster(params = {}) {
 export const degreeQuizMasterAddUpdate = saveDegreeQuizMaster;
 
 /**
+ * 2.5B Get Degree Quiz Details by Quiz ID
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId
+ *
+ * @param {number|object} quizIdOrParams - Quiz ID or object
+ * @returns {Promise<object>} Quiz details including MicrocredentialModuleMasterId and ModuleName
+ */
+export async function getDegreeQuizDetailsByQuizId(quizIdOrParams) {
+    try {
+        const inputDto = buildGetDegreeQuizDetailsByQuizIdInput(quizIdOrParams);
+        const response = await apiClient('api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId', {
+            method: 'POST',
+            headers: inputDto.headers,
+            body: inputDto.body
+        });
+
+        if (!response.ok && response.status !== 200) {
+            return parseGetDegreeQuizDetailsByQuizIdErrorOutput(response.data, response.status);
+        }
+
+        return parseGetDegreeQuizDetailsByQuizIdOutput(response.data, response.status);
+    } catch (error) {
+        console.error('Error in getDegreeQuizDetailsByQuizId:', error);
+        return parseGetDegreeQuizDetailsByQuizIdErrorOutput({ message: error.message }, 500);
+    }
+}
+
+/**
  * 2.6 Finalize Quiz & Save Settings (Save & Close)
  * Endpoint: POST /api/DegreeQuizAPI/FinalizeDegreeQuizAddUpdate
  *
@@ -545,6 +579,38 @@ export async function deleteDegreeQuizQuestion(quizIdOrParams, questionId, admin
 
 // Alias
 export const deleteDegreeQuizQuestions = deleteDegreeQuizQuestion;
+
+/**
+ * 2.9B Add / Update Degree Quiz Question Master (Supports all 12 Question Types)
+ * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate
+ *
+ * @param {object} params - DegreeQuizQuestionMasterInputParameter
+ * @returns {Promise<object>} Result containing questionId and status message
+ */
+export async function saveDegreeQuizQuestionMaster(params = {}) {
+    try {
+        const adminId = resolveAdminId(params.adminId ?? params.AdminId);
+        const inputDto = buildDegreeQuizQuestionMasterAddUpdateInput({ ...params, adminId });
+
+        const response = await apiClient('api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate', {
+            method: 'POST',
+            headers: inputDto.headers,
+            body: inputDto.body
+        });
+
+        if (!response.ok && response.status !== 200) {
+            return parseDegreeQuizQuestionMasterAddUpdateErrorOutput(response.data, response.status);
+        }
+
+        return parseDegreeQuizQuestionMasterAddUpdateOutput(response.data, response.status);
+    } catch (error) {
+        console.error('Error in saveDegreeQuizQuestionMaster:', error);
+        return parseDegreeQuizQuestionMasterAddUpdateErrorOutput({ message: error.message }, 500);
+    }
+}
+
+// Alias
+export const degreeQuizQuestionMasterAddUpdate = saveDegreeQuizQuestionMaster;
 
 /**
  * 2.10 Get Students for Special Quiz Access
@@ -953,8 +1019,10 @@ const AdminQuizPageService = {
     getStreamByProgramme,
     getMicrocredentialCoursesByStream,
     getMicrocredentialCourse,
+    getMicrocredentialModuleByCourseId,
     saveDegreeQuizMaster,
     degreeQuizMasterAddUpdate,
+    getDegreeQuizDetailsByQuizId,
     finalizeDegreeQuiz,
     finalizeDegreeQuizAddUpdate,
     getDegreeQuizQuestionsList,
@@ -963,6 +1031,8 @@ const AdminQuizPageService = {
     activeInactiveDegreeQuizQuestions,
     deleteDegreeQuizQuestion,
     deleteDegreeQuizQuestions,
+    saveDegreeQuizQuestionMaster,
+    degreeQuizQuestionMasterAddUpdate,
     getDegreeStudentsForSpecialQuizAccess,
     getMicrocredentialQuizCategoryList,
     checkPublicIpAddress,
@@ -986,6 +1056,7 @@ const AdminQuizPageService = {
     getStudentMicrocredentialQuizResultByAttempt
 };
 
+export { getMicrocredentialModuleByCourseId };
 export * from './microcredentialQuizResultService';
 
 export default AdminQuizPageService;

@@ -55,7 +55,7 @@ export function parseMainDegreeQuizListOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
     const isSuccess = resolveSuccess(data, status);
 
-    const rawList = data?.quizDegreeList || data?.QuizDegreeList || data?.quizList || data?.QuizList || (Array.isArray(data) ? data : []);
+    const rawList = data?.quizDegreeList || data?.QuizDegreeList || data?.degreeQuizList || data?.DegreeQuizList || data?.quizList || data?.QuizList || (Array.isArray(data) ? data : []);
     const quizDegreeList = Array.isArray(rawList)
         ? rawList.map(item => ({
             ...item,
@@ -69,6 +69,8 @@ export function parseMainDegreeQuizListOutput(rawJson = {}, status = 200) {
             microcredentialCourseId: item?.microcredentialCourseId ?? item?.MicrocredentialCourseId ?? 0,
             microcredentialCourseName: item?.microcredentialCourseName || item?.MicrocredentialCourseName || item?.microcredentialName || item?.MicrocredentialName || '',
             microcredentialName: item?.microcredentialName || item?.MicrocredentialName || item?.microcredentialCourseName || item?.MicrocredentialCourseName || '',
+            microcredentialModuleMasterId: item?.microcredentialModuleMasterId ?? item?.MicrocredentialModuleMasterId ?? 0,
+            moduleName: item?.moduleName || item?.ModuleName || '',
             degreeProgramName: item?.degreeProgramName || item?.DegreeProgramName || '',
             degreeCourseName: item?.degreeCourseName || item?.DegreeCourseName || '',
             semesterId: item?.semesterId ?? item?.SemesterId ?? 0,
@@ -99,6 +101,7 @@ export function parseMainDegreeQuizListOutput(rawJson = {}, status = 200) {
         message: resolveMessage(data, isSuccess ? 'Quiz list fetched successfully' : 'Failed to fetch quiz list'),
         errorDescription: !isSuccess ? resolveErrorDescription(data, 'Failed to fetch quiz list') : '',
         quizDegreeList,
+        degreeQuizList: quizDegreeList,
         pageDetail,
         totalRecords: pageDetail.totalRecords,
         rawData: data
@@ -283,6 +286,52 @@ export function parseDegreeQuizMasterAddUpdateErrorOutput(rawJson = {}, status =
 }
 
 /**
+ * 2.5B Parse Get Degree Quiz Details By Quiz ID Output
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId
+ */
+export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 200) {
+    const data = safeParseJson(rawJson);
+    const isSuccess = resolveSuccess(data, status);
+    const details = data?.degreeQuizDetails || data?.DegreeQuizDetails || data?.quizDetails || data?.QuizDetails || data;
+
+    return {
+        success: isSuccess,
+        status,
+        message: resolveMessage(data, isSuccess ? 'Quiz details fetched successfully.' : 'Failed to fetch quiz details.'),
+        quizDetails: details ? {
+            quizId: details?.quizId ?? details?.QuizId ?? 0,
+            quizTitle: details?.quizTitle || details?.QuizTitle || '',
+            quizDescription: details?.quizDescription || details?.QuizDescription || '',
+            educationTypeId: details?.educationTypeId ?? details?.EducationTypeId ?? 2,
+            streamId: details?.streamId ?? details?.StreamId ?? 0,
+            streamName: details?.streamName || details?.StreamName || details?.stream || '',
+            microcredentialCourseId: details?.microcredentialCourseId ?? details?.MicrocredentialCourseId ?? 0,
+            microcredentialCourseName: details?.microcredentialCourseName || details?.MicrocredentialCourseName || '',
+            microcredentialModuleMasterId: details?.microcredentialModuleMasterId ?? details?.MicrocredentialModuleMasterId ?? 0,
+            moduleName: details?.moduleName || details?.ModuleName || '',
+            gradeOutOf: details?.gradeOutOf ?? details?.GradeOutOf ?? 100,
+            dueDate: details?.dueDate || details?.DueDate || '',
+            gradeBook: details?.gradeBook || details?.GradeBook || 'In Grade Book',
+            yearRange: details?.yearRange || details?.YearRange || '',
+            isActive: Boolean(details?.isActive ?? details?.IsActive ?? true),
+            rawDetails: details
+        } : null,
+        rawData: data
+    };
+}
+
+export function parseGetDegreeQuizDetailsByQuizIdErrorOutput(rawJson = {}, status = 500) {
+    const data = safeParseJson(rawJson);
+    return {
+        success: false,
+        status,
+        message: resolveMessage(data, 'Failed to fetch quiz details'),
+        quizDetails: null,
+        rawData: data
+    };
+}
+
+/**
  * 2.6 Parse Finalize Quiz & Save Settings Output
  * Endpoint: POST /api/DegreeQuizAPI/FinalizeDegreeQuizAddUpdate
  */
@@ -321,16 +370,22 @@ export function parseDegreeQuizQuestionsListOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
     const isSuccess = resolveSuccess(data, status);
 
-    const rawList = data?.questionsList || data?.QuestionsList || [];
+    const rawList = data?.questionsList || data?.QuestionsList || data?.questionList || data?.QuestionList || [];
     const questionsList = Array.isArray(rawList)
         ? rawList.map(item => ({
+            ...item,
             questionsId: item?.questionsId ?? item?.QuestionsId ?? item?.id ?? 0,
             questionId: item?.questionId ?? item?.QuestionId ?? item?.questionsId ?? item?.QuestionsId ?? 0,
-            question: item?.question || item?.Question || item?.questionText || '',
+            question: item?.question || item?.Question || item?.questionText || item?.QuestionText || '',
+            questionText: item?.questionText || item?.QuestionText || item?.question || item?.Question || '',
             questionType: item?.questionType || item?.QuestionType || '',
-            points: item?.points ?? item?.Points ?? 0,
+            degreeQuestionType: Number(item?.degreeQuestionType ?? item?.DegreeQuestionType ?? item?.questionTypeId ?? item?.QuestionTypeId ?? 1),
+            points: Number(item?.points ?? item?.Points ?? 0),
             isActive: Boolean(item?.isActive ?? item?.IsActive ?? true),
-            createdOn: item?.createdOn || item?.CreatedOn || ''
+            createdOn: item?.createdOn || item?.CreatedOn || '',
+            options: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
+            degreeAnswersOptions: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
+            rawItem: item
         }))
         : [];
 
@@ -364,6 +419,34 @@ export function parseDegreeQuizQuestionsListErrorOutput(rawJson = {}, status = 5
         pageDetail: { totalRecords: 0, totalPoints: 0, pageNo: 1, pageSize: 10 },
         totalRecords: 0,
         totalPoints: 0,
+        rawData: data
+    };
+}
+
+/**
+ * 2.7B Parse Degree Quiz Question Master Add/Update Output
+ * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate
+ */
+export function parseDegreeQuizQuestionMasterAddUpdateOutput(rawJson = {}, status = 200) {
+    const data = safeParseJson(rawJson);
+    const isSuccess = resolveSuccess(data, status);
+    return {
+        success: isSuccess,
+        status,
+        message: resolveMessage(data, isSuccess ? 'Quiz question saved successfully.' : 'Failed to save quiz question.'),
+        questionId: data?.questionId ?? data?.QuestionId ?? data?.questionsId ?? data?.QuestionsId ?? 0,
+        errorDescription: !isSuccess ? resolveErrorDescription(data) : '',
+        rawData: data
+    };
+}
+
+export function parseDegreeQuizQuestionMasterAddUpdateErrorOutput(rawJson = {}, status = 500) {
+    const data = safeParseJson(rawJson);
+    return {
+        success: false,
+        status,
+        message: resolveMessage(data, 'Failed to save quiz question'),
+        errorDescription: resolveErrorDescription(data, 'Server error'),
         rawData: data
     };
 }
