@@ -7,6 +7,7 @@ import {
   CloseIcon,
   DownloadIcon,
   FileIcon,
+  TrashBinIcon,
 } from "../../icons";
 import {
   getStreamData,
@@ -59,16 +60,7 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
   const [selectedStreamId, setSelectedStreamId] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState(routeCourseId || "");
 
-  // Main Upload Document (Upload Microcredential)
-  const [uploadMicroDocument, setUploadMicroDocument] = useState(
-    location.state?.item?.uploadMicroDocument || ""
-  );
-  const [uploadMicroDocumentFile, setUploadMicroDocumentFile] = useState(null);
-  const [uploadingMainDoc, setUploadingMainDoc] = useState(false);
-  const [mainDocPreviewUrl, setMainDocPreviewUrl] = useState("");
-
-  // Student Download Documents
-  // Item format: { originalFileName, givenFileName, filePath, file (if newly picked) }
+  // Student Download Documents: [{ id, originalFileName, givenFileName, filePath, file, uploading, previewUrl }]
   const [studentDocs, setStudentDocs] = useState([]);
 
   // Topics list state
@@ -183,19 +175,28 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
         const list =
           studentDocsRes.adminGetMicrocredentialStudentDownloadDocumentsData ||
           studentDocsRes.microcredentialStudentDownloadDocumentList ||
+          studentDocsRes?.rawData?.adminGetMicrocredentialStudentDownloadDocumentsData ||
+          studentDocsRes?.rawData?.AdminGetMicrocredentialStudentDownloadDocumentsData ||
           [];
         if (list.length > 0) {
           setStudentDocs(
-            list.map((d) => ({
-              originalFileName: d.originalFileName || d.OriginalFileName || "Document",
-              givenFileName: d.givenFileName || d.GivenFileName || "",
-              filePath:
-                d.filePath ||
-                d.microcredentialStudentDownloadDocument ||
-                d.MicrocredentialStudentDownloadDocument ||
-                "",
-              file: null,
-            }))
+            list.map((d, index) => {
+              const docIdNum = Number(d.microcredentialStudentDownloadDocumentId ?? d.MicrocredentialStudentDownloadDocumentId ?? 0);
+              return {
+                id: docIdNum > 0 ? docIdNum : `doc_${Date.now()}_${index}`,
+                documentId: docIdNum,
+                microcredentialStudentDownloadDocumentId: docIdNum,
+                originalFileName: d.originalFileName || d.OriginalFileName || "Student Document",
+                givenFileName: d.givenFileName || d.GivenFileName || d.originalFileName || d.OriginalFileName || "Student Document",
+                filePath:
+                  d.filePath ||
+                  d.microcredentialStudentDownloadDocument ||
+                  d.MicrocredentialStudentDownloadDocument ||
+                  "",
+                file: null,
+                isExisting: true,
+              };
+            })
           );
         }
       }
@@ -268,7 +269,8 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
 
     if (Array.isArray(rawStudentDocList) && rawStudentDocList.length > 0) {
       setStudentDocs(
-        rawStudentDocList.map((d) => ({
+        rawStudentDocList.map((d, index) => ({
+          id: d.microcredentialStudentDownloadDocumentId || `doc_${Date.now()}_${index}`,
           originalFileName:
             d.originalFileName || d.OriginalFileName || "Student Document",
           givenFileName: d.givenFileName || d.GivenFileName || "",
@@ -278,13 +280,8 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
             d.MicrocredentialStudentDownloadDocument ||
             "",
           file: null,
+          isExisting: true,
         }))
-      );
-    }
-
-    if (detailData.uploadMicroDocument || detailData.UploadMicroDocument) {
-      setUploadMicroDocument(
-        detailData.uploadMicroDocument || detailData.UploadMicroDocument
       );
     }
   };
@@ -306,7 +303,8 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
           [];
         if (list.length > 0) {
           setStudentDocs(
-            list.map((d) => ({
+            list.map((d, index) => ({
+              id: d.microcredentialStudentDownloadDocumentId || `doc_${Date.now()}_${index}`,
               originalFileName:
                 d.originalFileName || d.OriginalFileName || "Document",
               givenFileName: d.givenFileName || d.GivenFileName || "",
@@ -316,6 +314,7 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
                 d.MicrocredentialStudentDownloadDocument ||
                 "",
               file: null,
+              isExisting: true,
             }))
           );
         }
@@ -433,59 +432,23 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
     }
   };
 
-  // Main Upload Microcredential document file selection
-  const handleMainDocChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const blobUrl = URL.createObjectURL(file);
-    setMainDocPreviewUrl(blobUrl);
-    setUploadMicroDocumentFile(file);
-
-    setUploadingMainDoc(true);
-    setErrorMessage("");
-    try {
-      const uploadRes = await commonUploadFile(
-        file,
-        "UploadSource",
-        "UploadMicroDocumentPdf",
-        uploadMicroDocument
-      );
-      const serverPath = uploadRes?.filePath || uploadRes?.documentList?.[0]?.filePath;
-      if (uploadRes?.success && serverPath) {
-        setUploadMicroDocument(serverPath);
-        setUploadMicroDocumentFile(null);
-      } else {
-        console.warn("Upload completed without server filePath:", uploadRes);
-      }
-    } catch (err) {
-      console.error("Error uploading microcredential document:", err);
-      setErrorMessage("Error uploading microcredential document.");
-    } finally {
-      setUploadingMainDoc(false);
-    }
-  };
-
-  const handleRemoveMainDoc = () => {
-    setUploadMicroDocument("");
-    setUploadMicroDocumentFile(null);
-    setMainDocPreviewUrl("");
-  };
-
   // Student download document multi-file selection
   const handleStudentDocsChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     for (const file of files) {
+      const docId = `new_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const blobUrl = URL.createObjectURL(file);
       const tempDoc = {
+        id: docId,
         originalFileName: file.name,
         givenFileName: file.name,
         filePath: "",
         file: file,
         previewUrl: blobUrl,
         uploading: true,
+        isExisting: false,
       };
       setStudentDocs((prev) => [...prev, tempDoc]);
 
@@ -502,20 +465,27 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
         if (uploadDocRes?.success && serverPath) {
           setStudentDocs((prev) =>
             prev.map((d) =>
-              d.file === file
-                ? { ...d, filePath: serverPath, givenFileName: givenName, originalFileName: originalName, file: null, uploading: false }
+              d.id === docId
+                ? {
+                    ...d,
+                    filePath: serverPath,
+                    givenFileName: givenName,
+                    originalFileName: originalName,
+                    file: null,
+                    uploading: false,
+                  }
                 : d
             )
           );
         } else {
           setStudentDocs((prev) =>
-            prev.map((d) => (d.file === file ? { ...d, uploading: false } : d))
+            prev.map((d) => (d.id === docId ? { ...d, uploading: false } : d))
           );
         }
       } catch (err) {
         console.warn("Student doc upload deferred to submit:", err);
         setStudentDocs((prev) =>
-          prev.map((d) => (d.file === file ? { ...d, uploading: false } : d))
+          prev.map((d) => (d.id === docId ? { ...d, uploading: false } : d))
         );
       }
     }
@@ -523,10 +493,30 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
     e.target.value = "";
   };
 
-  // Remove student document
-  const handleRemoveStudentDoc = (indexToRemove) => {
-    setStudentDocs((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  // Remove student download document
+  const removeStudentDownloadDocument = (documentId) => {
+    const id = parseInt(documentId, 10);
+    setStudentDocs((prev) =>
+      prev.filter((doc, idx) => {
+        const docId = parseInt(
+          doc.MicrocredentialStudentDownloadDocumentId ??
+          doc.microcredentialStudentDownloadDocumentId ??
+          doc.documentId ??
+          doc.id,
+          10
+        );
+        if (!isNaN(id) && !isNaN(docId) && id > 0 && docId > 0) {
+          return docId !== id;
+        }
+        if (doc.id !== undefined && doc.id !== null) {
+          return String(doc.id) !== String(documentId);
+        }
+        return idx !== documentId;
+      })
+    );
   };
+
+  const handleRemoveStudentDoc = removeStudentDownloadDocument;
 
   // Download Excel Template (API 1)
   const handleDownloadTemplate = async () => {
@@ -650,26 +640,10 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
     setSuccessMessage("");
 
     try {
-      // 1. Upload Main Document if newly chosen and not yet uploaded (UploadSource: "UploadMicroDocumentPdf")
-      let finalMainDocPath = uploadMicroDocument;
-      if (uploadMicroDocumentFile) {
-        const uploadRes = await commonUploadFile(
-          uploadMicroDocumentFile,
-          "UploadSource",
-          "UploadMicroDocumentPdf",
-          uploadMicroDocument
-        );
-        const serverPath = uploadRes?.filePath || uploadRes?.documentList?.[0]?.filePath;
-        if (serverPath) {
-          finalMainDocPath = serverPath;
-          setUploadMicroDocument(serverPath);
-        }
-      }
-
-      // 2. Upload Student Download Documents if any newly selected (UploadSource: "MicrocredentialStudentDownloadDocument")
+      // 1. Upload Student Download Documents if any newly selected
       const finalStudentDocsList = [];
       for (const doc of studentDocs) {
-        if (doc.file) {
+        if (doc.file && !doc.filePath) {
           const uploadDocRes = await commonUploadFile(
             doc.file,
             "UploadSource",
@@ -688,27 +662,44 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
             filePath = uploadDocRes.rawData[0].filePath;
             givenName = uploadDocRes.rawData[0].givenName || givenName;
             originalName = uploadDocRes.rawData[0].originalName || originalName;
+          } else if (uploadDocRes?.filePath) {
+            filePath = uploadDocRes.filePath;
           } else if (uploadDocRes?.rawData?.filePath) {
             filePath = uploadDocRes.rawData.filePath;
           }
 
           if (filePath) {
             finalStudentDocsList.push({
+              MicrocredentialStudentDownloadDocumentId: 0,
+              microcredentialStudentDownloadDocumentId: 0,
               OriginalFileName: originalName,
               GivenFileName: givenName,
               MicrocredentialStudentDownloadDocument: filePath,
+              originalFileName: originalName,
+              givenFileName: givenName,
+              microcredentialStudentDownloadDocument: filePath,
             });
           }
         } else if (doc.filePath) {
+          const existingDocId = doc.isExisting
+            ? Number(doc.documentId ?? doc.microcredentialStudentDownloadDocumentId ?? (typeof doc.id === "number" ? doc.id : 0) ?? 0)
+            : 0;
+          const validDocId = !isNaN(existingDocId) ? existingDocId : 0;
+
           finalStudentDocsList.push({
-            OriginalFileName: doc.originalFileName,
-            GivenFileName: doc.givenFileName || doc.originalFileName,
+            MicrocredentialStudentDownloadDocumentId: validDocId,
+            microcredentialStudentDownloadDocumentId: validDocId,
+            OriginalFileName: doc.originalFileName || "Document",
+            GivenFileName: doc.givenFileName || doc.originalFileName || "Document",
             MicrocredentialStudentDownloadDocument: doc.filePath,
+            originalFileName: doc.originalFileName || "Document",
+            givenFileName: doc.givenFileName || doc.originalFileName || "Document",
+            microcredentialStudentDownloadDocument: doc.filePath,
           });
         }
       }
 
-      // 3. Upload Topic PDFs if newly selected (UploadSource: "MicroCourseTopicpdf")
+      // 2. Upload Topic PDFs if newly selected
       const finalTopicsList = [];
       for (const topic of validTopics) {
         let topicPdfPath = topic.topicPdf || "";
@@ -737,12 +728,13 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
         });
       }
 
-      // 4. Assemble MicroCourseTopicAddUpdate Payload (API 5)
+      // 3. API 5 Payload: MicroCourseTopicAddUpdate
       const payload = {
         StreamId: Number(selectedStreamId),
         MicrocredentialCourseId: Number(selectedCourseId),
+        MicrocredentialModuleMasterId: Number(location.state?.moduleId || location.state?.item?.microcredentialModuleMasterId || 0),
         AdminId: 1,
-        UploadMicroDocument: finalMainDocPath,
+        UploadMicroDocument: "",
         MicrocredentialCourseTopicList: finalTopicsList,
         MicrocredentialStudentDownloadDocumentList: finalStudentDocsList,
       };
@@ -957,52 +949,7 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
               </select>
             </div>
 
-            {/* Field 3: Upload Microcredential Document */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Upload Microcredential
-              </label>
-              <input
-                type="file"
-                id="UploadMicroDocument"
-                accept=".pdf,.doc,.docx"
-                onChange={handleMainDocChange}
-                disabled={saving || uploadingMainDoc}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:file:bg-gray-700 dark:file:text-gray-200"
-              />
-              {uploadingMainDoc ? (
-                <div className="mt-2 flex items-center gap-1.5 text-xs text-blue-600 font-medium">
-                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                  <span>Uploading microcredential document...</span>
-                </div>
-              ) : (mainDocPreviewUrl || uploadMicroDocument) ? (
-                <div className="mt-2 flex items-center gap-2 text-xs">
-                  <a
-                    href={mainDocPreviewUrl || formatImageUrl(uploadMicroDocument)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-                  >
-                    <FileIcon className="size-3.5 shrink-0" />
-                    <span>View uploaded PDF</span>
-                  </a>
-                  <span className="text-gray-400">•</span>
-                  <span className="text-gray-600 dark:text-gray-400 truncate max-w-xs" title={uploadMicroDocument || uploadMicroDocumentFile?.name}>
-                    {(uploadMicroDocument ? uploadMicroDocument.split("/").pop() : uploadMicroDocumentFile?.name) || "Document"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleRemoveMainDoc}
-                    disabled={saving}
-                    className="text-red-500 hover:text-red-600 text-[11px] font-medium ml-1"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Field 4: Student Download Document (Multiple) */}
+            {/* Field 3: Student Download Document (Multiple Documents with Remove Button) */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Student Download Document
@@ -1010,54 +957,59 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
               <input
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx,.zip,.rar"
+                accept=".pdf,.doc,.docx,.zip,.rar,.xls,.xlsx,.ppt,.pptx"
                 onChange={handleStudentDocsChange}
                 disabled={saving}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-700 hover:file:bg-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:file:bg-gray-700 dark:file:text-gray-200"
               />
 
-              {/* Uploaded / Selected Document List */}
+              {/* Uploaded / Selected / Existing Document List */}
               {studentDocs.length > 0 && (
-                <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                <div className="mt-2.5 space-y-2 max-h-48 overflow-y-auto pr-1">
+                  <p className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">
+                    Documents ({studentDocs.length}):
+                  </p>
                   {studentDocs.map((doc, idx) => (
                     <div
-                      key={idx}
-                      className="flex items-center justify-between gap-2 text-xs"
+                      key={doc.id || idx}
+                      id={doc.id || doc.microcredentialStudentDownloadDocumentId || `doc-${idx}`}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-gray-50/80 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-800/60"
                     >
-                      <div className="flex items-center gap-1 min-w-0 flex-1">
-                        <span className="font-semibold text-gray-700 dark:text-gray-300">
-                          {idx + 1}.
-                        </span>
-                        {doc.uploading ? (
-                          <span className="flex items-center gap-1 font-medium text-blue-600">
-                            <span className="inline-block size-3 animate-spin rounded-full border border-blue-600 border-t-transparent" />
-                            <span>Uploading {doc.originalFileName}...</span>
-                          </span>
-                        ) : (doc.previewUrl || doc.filePath) ? (
-                          <a
-                            href={doc.previewUrl || formatImageUrl(doc.filePath)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 font-medium text-emerald-600 hover:text-emerald-700 truncate"
-                            title={doc.originalFileName}
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <FileIcon className="size-4 shrink-0 text-brand-500" />
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="truncate font-medium text-gray-800 dark:text-gray-200 text-xs"
+                            title={doc.originalFileName || doc.givenFileName || "Document"}
                           >
-                            <FileIcon className="size-3.5 shrink-0" />
-                            <span className="truncate">View ({doc.originalFileName})</span>
-                          </a>
-                        ) : (
-                          <span className="truncate font-medium text-gray-600 dark:text-gray-400">
-                            {doc.originalFileName}
-                          </span>
-                        )}
+                            {doc.originalFileName || doc.givenFileName || "Document"}
+                          </p>
+                          {doc.uploading ? (
+                            <span className="flex items-center gap-1 text-[10px] font-medium text-blue-600">
+                              <span className="inline-block size-2.5 animate-spin rounded-full border border-blue-600 border-t-transparent" />
+                              <span>Uploading...</span>
+                            </span>
+                          ) : (doc.previewUrl || doc.filePath) ? (
+                            <a
+                              href={doc.previewUrl || formatImageUrl(doc.filePath)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-brand-600 hover:text-brand-700 hover:underline dark:text-brand-400 font-medium inline-flex items-center gap-1"
+                            >
+                              <span>View / Download</span>
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
 
                       <button
                         type="button"
-                        onClick={() => handleRemoveStudentDoc(idx)}
+                        onClick={() => removeStudentDownloadDocument(doc.id || doc.microcredentialStudentDownloadDocumentId || idx)}
                         disabled={saving}
-                        className="rounded border border-red-400 px-2 py-0.5 text-[11px] font-medium text-red-500 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
+                        title="Remove document from course"
+                        className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 transition dark:hover:bg-red-950/40"
                       >
-                        Remove
+                        <TrashBinIcon className="size-4" />
                       </button>
                     </div>
                   ))}

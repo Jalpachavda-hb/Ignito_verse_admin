@@ -8,9 +8,9 @@
  */
 export function parseGetMicrocredentialStudentDownloadDocumentsOutput(rawJson = {}, status = 200) {
     const isHttpOk = status >= 200 && status < 300;
-    const isSuccess = Boolean(rawJson?.isSuccess ?? rawJson?.IsSuccess ?? isHttpOk);
-
     const rawList = rawJson?.adminGetMicrocredentialStudentDownloadDocumentsData || rawJson?.AdminGetMicrocredentialStudentDownloadDocumentsData || [];
+    const hasData = Array.isArray(rawList) && rawList.length > 0;
+    const isSuccess = Boolean(rawJson?.isSuccess || rawJson?.IsSuccess || hasData || (isHttpOk && !rawJson?.errorDescription));
 
     const adminGetMicrocredentialStudentDownloadDocumentsData = Array.isArray(rawList)
         ? rawList.map(item => ({

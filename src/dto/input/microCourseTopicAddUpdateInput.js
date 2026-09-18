@@ -8,10 +8,12 @@
 export function buildMicroCourseTopicAddUpdateInput(data = {}) {
     const microcredentialCourseTopicList = Array.isArray(data.microcredentialCourseTopicList || data.MicrocredentialCourseTopicList)
         ? (data.microcredentialCourseTopicList || data.MicrocredentialCourseTopicList).map(item => ({
+            MicrocredentialCourseTopicId: Number(item?.MicrocredentialCourseTopicId ?? item?.microcredentialCourseTopicId ?? item?.id ?? 0),
             TopicName: item?.TopicName || item?.topicName || '',
             VideoTitle: item?.VideoTitle || item?.videoTitle || '',
             TopicVideoUrl: item?.TopicVideoUrl || item?.topicVideoUrl || '',
             TopicPdf: item?.TopicPdf || item?.topicPdf || '',
+            microcredentialCourseTopicId: Number(item?.MicrocredentialCourseTopicId ?? item?.microcredentialCourseTopicId ?? item?.id ?? 0),
             topicName: item?.TopicName || item?.topicName || '',
             videoTitle: item?.VideoTitle || item?.videoTitle || '',
             topicVideoUrl: item?.TopicVideoUrl || item?.topicVideoUrl || '',
@@ -21,9 +23,11 @@ export function buildMicroCourseTopicAddUpdateInput(data = {}) {
 
     const microcredentialStudentDownloadDocumentList = Array.isArray(data.microcredentialStudentDownloadDocumentList || data.MicrocredentialStudentDownloadDocumentList)
         ? (data.microcredentialStudentDownloadDocumentList || data.MicrocredentialStudentDownloadDocumentList).map(item => ({
+            MicrocredentialStudentDownloadDocumentId: Number(item?.MicrocredentialStudentDownloadDocumentId ?? item?.microcredentialStudentDownloadDocumentId ?? item?.id ?? 0),
             OriginalFileName: item?.OriginalFileName || item?.originalFileName || '',
             GivenFileName: item?.GivenFileName || item?.givenFileName || '',
             MicrocredentialStudentDownloadDocument: item?.MicrocredentialStudentDownloadDocument || item?.microcredentialStudentDownloadDocument || '',
+            microcredentialStudentDownloadDocumentId: Number(item?.MicrocredentialStudentDownloadDocumentId ?? item?.microcredentialStudentDownloadDocumentId ?? item?.id ?? 0),
             originalFileName: item?.OriginalFileName || item?.originalFileName || '',
             givenFileName: item?.GivenFileName || item?.givenFileName || '',
             microcredentialStudentDownloadDocument: item?.MicrocredentialStudentDownloadDocument || item?.microcredentialStudentDownloadDocument || ''
