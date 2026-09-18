@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation, Link } from "react-router";
 import PageBreadcrumb from "../common/PageBreadCrumb";
 import PageMeta from "../common/PageMeta";
 import {
@@ -628,16 +628,19 @@ export default function MicrocredentialQuizList() {
                       {/* Actions: Questions, Print, View Preview, Edit, Delete */}
                       <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Manage Questions (All 12 Types) */}
-                          <button
-                            type="button"
-                            onClick={() => setQuestionManagerQuiz(quiz)}
+                          {/* Manage Questions (All 12 Types) Page */}
+                          <Link
+                            to={`/microcredential/quiz-questions/${quiz.quizId || quiz.QuizId}`}
+                            state={{
+                              quizTitle: quiz.quizTitle || quiz.QuizTitle,
+                              moduleName: quiz.moduleName || quiz.ModuleName || "",
+                            }}
                             title="Manage Questions (12 Types)"
                             className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
                           >
                             <span>📝</span>
                             <span className="hidden xl:inline">Questions</span>
-                          </button>
+                          </Link>
 
                           {/* Print */}
                           <button

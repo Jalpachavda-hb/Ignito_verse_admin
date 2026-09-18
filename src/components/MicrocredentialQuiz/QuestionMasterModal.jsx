@@ -18,22 +18,14 @@ export const QUESTION_TYPES = [
   { id: 2, name: "True / False", desc: "Binary true or false evaluation" },
   { id: 3, name: "Fill-in-the-Blank", desc: "Passage with blank inputs" },
   { id: 4, name: "Multi-Select", desc: "Multiple checkboxes with multiple correct answers" },
-  { id: 5, name: "Matching", desc: "Match items in Column A with choices in Column B" },
-  { id: 6, name: "Ordering", desc: "Arrange items into sequential order" },
-  { id: 7, name: "Written Response", desc: "Long answer essay with optional attachments" },
-  { id: 8, name: "Short Answer", desc: "Direct short text evaluation" },
-  { id: 9, name: "Arithmetic", desc: "Mathematical formulas with variable ranges and tolerance" },
-  { id: 10, name: "Significant Figures", desc: "Scientific calculations with significant figures scale" },
-  { id: 11, name: "Multi Short Answer", desc: "Multiple short answer boxes with percentage weights" },
-  { id: 12, name: "Likert Scale", desc: "Rating survey statements on agreement scale" },
 ];
 
-export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestionsUpdated }) {
+export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestionsUpdated, initialTab = "list" }) {
   const quizId = Number(quiz?.quizId || quiz?.QuizId || 0);
   const quizTitle = quiz?.quizTitle || quiz?.QuizTitle || "Quiz Questions";
 
   // Tab: "list" | "editor"
-  const [activeTab, setActiveTab] = useState("list");
+  const [activeTab, setActiveTab] = useState(initialTab || "list");
 
   // Questions List State
   const [questions, setQuestions] = useState([]);
@@ -182,17 +174,8 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
     }
   }, [quizId]);
 
-  useEffect(() => {
-    if (isOpen && quizId) {
-      loadQuestions();
-      setActiveTab("list");
-      setErrorMessage("");
-      setSuccessMessage("");
-    }
-  }, [isOpen, quizId, loadQuestions]);
-
   // Reset Editor for New Question
-  const handleAddNewQuestion = (typeId = 1) => {
+  const handleAddNewQuestion = useCallback((typeId = 1) => {
     setEditingQuestionId(0);
     setQuestionType(typeId);
     setCommonForm({
@@ -220,7 +203,20 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
     setActiveTab("editor");
     setErrorMessage("");
     setSuccessMessage("");
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && quizId) {
+      loadQuestions();
+      if (initialTab === "editor") {
+        handleAddNewQuestion(1);
+      } else {
+        setActiveTab("list");
+      }
+      setErrorMessage("");
+      setSuccessMessage("");
+    }
+  }, [isOpen, quizId, loadQuestions, initialTab, handleAddNewQuestion]);
 
   // Edit Existing Question
   const handleEditQuestion = (q) => {
@@ -740,7 +736,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
               {/* Type Selection Pills */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Select Question Type (1 of 12 Types)
+                  Select Question Type (1 of 4 Types)
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                   {QUESTION_TYPES.map((t) => (

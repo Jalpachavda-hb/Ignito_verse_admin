@@ -799,3 +799,25 @@ export function buildGetStudentMicrocredentialQuizResponseInput(studentId = 0, m
         })
     };
 }
+
+/**
+ * 2.12 Fetch Degree Quiz Preview By Quiz ID Input
+ * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizPerviewGetByQuizId
+ */
+export function buildDegreeQuizPreviewGetByQuizIdInput(quizId = 0) {
+    const opts = normalizeOptions(quizId) || { quizId };
+    const cleanQuizId = Number(opts.quizId ?? opts.QuizId ?? 0);
+
+    return {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            QuizId: cleanQuizId,
+            quizId: cleanQuizId
+        })
+    };
+}
+
+

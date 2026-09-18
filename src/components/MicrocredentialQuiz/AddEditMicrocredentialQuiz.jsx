@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation, Link } from "react-router";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.css";
 import PageBreadcrumb from "../common/PageBreadCrumb";
 import PageMeta from "../common/PageMeta";
 import {
@@ -7,18 +9,126 @@ import {
   AlertIcon,
   CloseIcon,
   AngleLeftIcon,
+  CalenderIcon,
+  TimeIcon,
 } from "../../icons";
 import {
   getStreamsDropdown,
   getMicrocredentialCoursesByStream,
   getMicrocredentialModuleByCourseId,
-  getMicrocredentialQuizCategoryList,
   saveDegreeQuizMaster,
   getDegreeQuizDetailsByQuizId,
   finalizeDegreeQuiz,
   fetchPaginatedMicrocredentialQuizList,
 } from "../../services/AdminQuizPageService";
-import QuestionMasterModal from "./QuestionMasterModal";
+
+/**
+ * Reusable Themed Date Picker Component based on Flatpickr
+ */
+function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disabled = false }) {
+  const inputRef = useRef(null);
+  const fpRef = useRef(null);
+
+  useEffect(() => {
+    if (!inputRef.current) return;
+    fpRef.current = flatpickr(inputRef.current, {
+      dateFormat: "Y-m-d",
+      static: true,
+      monthSelectorType: "static",
+      defaultDate: value || undefined,
+      clickOpens: true,
+      prevArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      nextArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L12.5 10L7.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      onChange: (selectedDates, dateStr) => {
+        if (onChange) onChange(dateStr);
+      },
+    });
+
+    return () => {
+      if (fpRef.current && !Array.isArray(fpRef.current)) {
+        fpRef.current.destroy();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (fpRef.current && value !== undefined) {
+      fpRef.current.setDate(value || "", false);
+    }
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        disabled={disabled}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+        <CalenderIcon className="size-4" />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Reusable Themed Time Picker Component based on Flatpickr (12-hour AM/PM)
+ */
+function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabled = false }) {
+  const inputRef = useRef(null);
+  const fpRef = useRef(null);
+
+  useEffect(() => {
+    if (!inputRef.current) return;
+    fpRef.current = flatpickr(inputRef.current, {
+      enableTime: true,
+      noCalendar: true,
+      dateFormat: "h:i K", // 12-hour format with AM/PM e.g. "10:00 AM"
+      time_24hr: false,
+      defaultDate: value || undefined,
+      clickOpens: true,
+      static: true,
+      prevArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      nextArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L12.5 10L7.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      onChange: (selectedDates, dateStr) => {
+        if (onChange) onChange(dateStr);
+      },
+    });
+
+    return () => {
+      if (fpRef.current && !Array.isArray(fpRef.current)) {
+        fpRef.current.destroy();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (fpRef.current && value !== undefined) {
+      fpRef.current.setDate(value || "", false);
+    }
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        disabled={disabled}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+        <TimeIcon className="size-4" />
+      </span>
+    </div>
+  );
+}
 
 export default function AddEditMicrocredentialQuiz() {
   const navigate = useNavigate();
@@ -35,13 +145,11 @@ export default function AddEditMicrocredentialQuiz() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
 
   // Dropdown options
   const [streams, setStreams] = useState([]);
   const [courses, setCourses] = useState([]);
   const [modules, setModules] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -72,8 +180,8 @@ export default function AddEditMicrocredentialQuiz() {
     endDate: "",
     endTime: "18:00",
     password: "",
-    // Attempts & Category
-    attemptsAllowed: 2,
+    // Attempts & Category (Category defaults to 1)
+    attemptsAllowed: 1,
     categoryId: 1,
     // Evaluation & Feedback
     deductPoints: false,
@@ -82,17 +190,13 @@ export default function AddEditMicrocredentialQuiz() {
     syncToGradeBook: true,
   });
 
-  // Load static dropdowns on mount
+  // Load static streams on mount
   useEffect(() => {
     let isMounted = true;
 
-    async function loadDropdowns() {
+    async function loadStreams() {
       try {
-        const [streamRes, catRes] = await Promise.all([
-          getStreamsDropdown(),
-          getMicrocredentialQuizCategoryList(),
-        ]);
-
+        const streamRes = await getStreamsDropdown();
         if (!isMounted) return;
 
         if (streamRes?.success && Array.isArray(streamRes.streamDataList)) {
@@ -100,22 +204,12 @@ export default function AddEditMicrocredentialQuiz() {
         } else if (streamRes?.streamList) {
           setStreams(streamRes.streamList);
         }
-
-        if (catRes?.success && Array.isArray(catRes.microcredentialQuizCategoryList)) {
-          setCategories(catRes.microcredentialQuizCategoryList);
-        } else {
-          setCategories([
-            { microcredentialQuizCategoryId: 1, microcredentialCategoryName: "General Assessment" },
-            { microcredentialQuizCategoryId: 2, microcredentialCategoryName: "Module Checkpoint" },
-            { microcredentialQuizCategoryId: 3, microcredentialCategoryName: "Final Certification Quiz" },
-          ]);
-        }
       } catch (err) {
-        console.warn("Failed to load setup dropdowns:", err);
+        console.warn("Failed to load stream dropdown:", err);
       }
     }
 
-    loadDropdowns();
+    loadStreams();
 
     return () => {
       isMounted = false;
@@ -218,8 +312,8 @@ export default function AddEditMicrocredentialQuiz() {
         endDate: q.endDate || "",
         endTime: q.endTime || "18:00",
         password: q.password || "",
-        attemptsAllowed: q.attemptsAllowed || 2,
-        categoryId: q.categoryId || 1,
+        attemptsAllowed: q.attemptsAllowed || 1,
+        categoryId: 1,
         deductPoints: Boolean(q.deductPoints ?? false),
         deductionInPercentage: q.deductionInPercentage || 0,
         autoPublishResults: Boolean(q.autoPublishResults ?? true),
@@ -246,8 +340,9 @@ export default function AddEditMicrocredentialQuiz() {
       setLoadingCourses(true);
       try {
         const res = await getMicrocredentialCoursesByStream(formData.streamId);
-        if (isMounted && res?.success && Array.isArray(res.microcredentialCourseOutputList)) {
-          setCourses(res.microcredentialCourseOutputList);
+        const list = res?.microcredentialCourseOutputList || res?.courses || [];
+        if (isMounted && Array.isArray(list)) {
+          setCourses(list);
         } else if (isMounted) {
           setCourses([]);
         }
@@ -278,8 +373,9 @@ export default function AddEditMicrocredentialQuiz() {
       setLoadingModules(true);
       try {
         const res = await getMicrocredentialModuleByCourseId(formData.microcredentialCourseId);
-        if (isMounted && res?.success && Array.isArray(res.microcredentialModuleList)) {
-          setModules(res.microcredentialModuleList);
+        const list = res?.microcredentialModuleList || res?.modules || [];
+        if (isMounted && Array.isArray(list)) {
+          setModules(list);
         } else if (isMounted) {
           setModules([]);
         }
@@ -310,6 +406,8 @@ export default function AddEditMicrocredentialQuiz() {
       microcredentialCourseId: 0,
       microcredentialModuleMasterId: 0,
     }));
+    setCourses([]);
+    setModules([]);
   };
 
   const handleCourseChange = (e) => {
@@ -319,6 +417,7 @@ export default function AddEditMicrocredentialQuiz() {
       microcredentialCourseId: cId,
       microcredentialModuleMasterId: 0,
     }));
+    setModules([]);
   };
 
   const handleSubmit = async (e) => {
@@ -341,8 +440,19 @@ export default function AddEditMicrocredentialQuiz() {
     setSuccessMessage("");
 
     try {
+      const payload = {
+        ...formData,
+        categoryId: 1, // Default 1 passed in payload
+        yearRange: formData.yearRange || "2026 - 2027",
+        gradeOutOf: Number(formData.gradeOutOf) || 10,
+        gradeBook: formData.gradeBook || "In Grade Book",
+        dueDate: formData.dueDate || "",
+        password: formData.password || "",
+        attemptsAllowed: Number(formData.attemptsAllowed) || 1,
+      };
+
       // Step 1: Save Quiz Master
-      const masterRes = await saveDegreeQuizMaster(formData);
+      const masterRes = await saveDegreeQuizMaster(payload);
       if (!masterRes || masterRes.success === false) {
         setErrorMessage(masterRes?.message || "Failed to save Quiz Master.");
         setSaving(false);
@@ -350,12 +460,12 @@ export default function AddEditMicrocredentialQuiz() {
         return;
       }
 
-      const assignedQuizId = masterRes.quizId || formData.quizId;
+      const assignedQuizId = Number(masterRes.quizId || formData.quizId);
 
       // Step 2: Finalize Quiz Settings
       try {
         const finalizeRes = await finalizeDegreeQuiz({
-          ...formData,
+          ...payload,
           quizId: assignedQuizId,
         });
         if (finalizeRes && finalizeRes.success === false) {
@@ -365,16 +475,13 @@ export default function AddEditMicrocredentialQuiz() {
         console.warn("finalizeDegreeQuiz error:", fErr);
       }
 
-      const msg = isEditMode
-        ? "Quiz updated successfully!"
-        : "New microcredential quiz created successfully!";
-      setSuccessMessage(msg);
-
-      setTimeout(() => {
-        navigate("/microcredential/quiz", {
-          state: { successMessage: msg },
-        });
-      }, 1000);
+      // Redirect to full-page Quiz Questions Manager
+      navigate(`/microcredential/quiz-questions/${assignedQuizId}`, {
+        state: {
+          quizTitle: formData.quizTitle,
+          fromAdd: true,
+        },
+      });
     } catch (err) {
       console.error("Error saving quiz:", err);
       setErrorMessage(err.message || "An unexpected error occurred while saving quiz.");
@@ -522,7 +629,7 @@ export default function AddEditMicrocredentialQuiz() {
                 </option>
                 {courses.map((c) => (
                   <option key={c.microcredentialCourseId} value={c.microcredentialCourseId}>
-                    {c.microcredentialCourseName}
+                    {c.microcredentialCourseName || c.courseName}
                   </option>
                 ))}
                 {formData.microcredentialCourseId > 0 &&
@@ -571,79 +678,19 @@ export default function AddEditMicrocredentialQuiz() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mt-5">
-            {/* Year Range */}
-            <div className="md:col-span-3">
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Year Range
-              </label>
-              <input
-                type="text"
-                placeholder="2026 - 2027"
-                value={formData.yearRange}
-                onChange={(e) => handleChange("yearRange", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
-
-            {/* Quiz Title */}
-            <div className="md:col-span-6">
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Quiz Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Mid-Term Assessment on Data Structures"
-                value={formData.quizTitle}
-                onChange={(e) => handleChange("quizTitle", e.target.value)}
-                required
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
-
-            {/* Grade Out Of */}
-            <div className="md:col-span-3">
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Grade Out Of
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="1000"
-                value={formData.gradeOutOf}
-                onChange={(e) => handleChange("gradeOutOf", Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            {/* Due Date */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Due Date
-              </label>
-              <input
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => handleChange("dueDate", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
-
-            {/* Grade Book Association */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Grade Book
-              </label>
-              <input
-                type="text"
-                value={formData.gradeBook}
-                onChange={(e) => handleChange("gradeBook", e.target.value)}
-                placeholder="In Grade Book"
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
-            </div>
+          {/* Quiz Title */}
+          <div className="mt-5">
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Quiz Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Mid-Term Assessment on Data Structures"
+              value={formData.quizTitle}
+              onChange={(e) => handleChange("quizTitle", e.target.value)}
+              required
+              className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            />
           </div>
 
           {/* Description */}
@@ -661,7 +708,7 @@ export default function AddEditMicrocredentialQuiz() {
           </div>
         </div>
 
-        {/* Section 2: Timing, Display & Access Restrictions */}
+        {/* Section 2: Timing, Display & Pacing Controls */}
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <h2 className="text-base font-bold text-gray-900 dark:text-white mb-1">
             2. Timing, Display & Pacing Controls
@@ -670,7 +717,7 @@ export default function AddEditMicrocredentialQuiz() {
             Configure examination time limits, questions distribution per page, and navigation restrictions.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
             {/* Time Limit Setting */}
             <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
               <label className="flex items-center gap-2 cursor-pointer mb-3">
@@ -717,20 +764,6 @@ export default function AddEditMicrocredentialQuiz() {
                 <option value={10}>10 Questions per page</option>
                 <option value={0}>All Questions on single page</option>
               </select>
-            </div>
-
-            {/* Password Access */}
-            <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
-              <label className="block text-xs font-semibold text-gray-800 dark:text-white mb-2">
-                Access Password (Optional)
-              </label>
-              <input
-                type="text"
-                placeholder="Leave blank for open access"
-                value={formData.password}
-                onChange={(e) => handleChange("password", e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              />
             </div>
           </div>
 
@@ -801,11 +834,10 @@ export default function AddEditMicrocredentialQuiz() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Start Date
               </label>
-              <input
-                type="date"
+              <ThemedDatePicker
                 value={formData.startDate}
-                onChange={(e) => handleChange("startDate", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                placeholder="YYYY-MM-DD"
+                onChange={(dateStr) => handleChange("startDate", dateStr)}
               />
             </div>
 
@@ -814,11 +846,10 @@ export default function AddEditMicrocredentialQuiz() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Start Time
               </label>
-              <input
-                type="time"
+              <ThemedTimePicker
                 value={formData.startTime}
-                onChange={(e) => handleChange("startTime", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                placeholder="hh:mm AM/PM"
+                onChange={(timeStr) => handleChange("startTime", timeStr)}
               />
             </div>
 
@@ -827,11 +858,10 @@ export default function AddEditMicrocredentialQuiz() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 End Date
               </label>
-              <input
-                type="date"
+              <ThemedDatePicker
                 value={formData.endDate}
-                onChange={(e) => handleChange("endDate", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                placeholder="YYYY-MM-DD"
+                onChange={(dateStr) => handleChange("endDate", dateStr)}
               />
             </div>
 
@@ -840,17 +870,16 @@ export default function AddEditMicrocredentialQuiz() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 End Time
               </label>
-              <input
-                type="time"
+              <ThemedTimePicker
                 value={formData.endTime}
-                onChange={(e) => handleChange("endTime", e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                placeholder="hh:mm AM/PM"
+                onChange={(timeStr) => handleChange("endTime", timeStr)}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            {/* Attempts Allowed */}
+            {/* Attempts Allowed (1 to 10) */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Attempts Allowed
@@ -860,30 +889,9 @@ export default function AddEditMicrocredentialQuiz() {
                 onChange={(e) => handleChange("attemptsAllowed", Number(e.target.value))}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               >
-                <option value={1}>1 Attempt Only</option>
-                <option value={2}>2 Attempts</option>
-                <option value={3}>3 Attempts</option>
-                <option value={5}>5 Attempts</option>
-                <option value={0}>Unlimited Attempts</option>
-              </select>
-            </div>
-
-            {/* Quiz Category */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Quiz Category
-              </label>
-              <select
-                value={formData.categoryId}
-                onChange={(e) => handleChange("categoryId", Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-              >
-                {categories.map((cat) => (
-                  <option
-                    key={cat.microcredentialQuizCategoryId}
-                    value={cat.microcredentialQuizCategoryId}
-                  >
-                    {cat.microcredentialCategoryName}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                  <option key={num} value={num}>
+                    {num} {num === 1 ? "Attempt Only" : "Attempts"}
                   </option>
                 ))}
               </select>
@@ -975,28 +983,14 @@ export default function AddEditMicrocredentialQuiz() {
                     d="M4 12a8 8 0 018-8v8H4z"
                   />
                 </svg>
-                <span>Saving Quiz...</span>
+                <span>Saving...</span>
               </>
             ) : (
-              <span>{isEditMode ? "Update Quiz" : "Save Quiz"}</span>
+              <span>Next</span>
             )}
           </button>
         </div>
       </form>
-
-      {/* Question Master Modal */}
-      {formData.quizId > 0 && (
-        <QuestionMasterModal
-          isOpen={isQuestionModalOpen}
-          quiz={{
-            quizId: formData.quizId,
-            quizTitle: formData.quizTitle || "Quiz",
-            moduleName: modules.find(m => Number(m.microcredentialModuleMasterId) === Number(formData.microcredentialModuleMasterId))?.moduleName || "",
-            totalQuestions: 0,
-          }}
-          onClose={() => setIsQuestionModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

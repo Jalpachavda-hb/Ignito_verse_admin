@@ -44,6 +44,7 @@ import {
 import {
   MicrocredentialQuizList,
   AddEditMicrocredentialQuiz,
+  MicrocredentialQuizQuestionsPage,
   MicrocredentialCheckpointQuizList,
   MicrocredentialQuizResult,
   MicrocredentialCheckpointQuizReport,
@@ -193,6 +194,10 @@ export default function App() {
               element={<AddEditMicrocredentialQuiz />}
             />
             <Route
+              path="/microcredential/quiz-questions/:id"
+              element={<MicrocredentialQuizQuestionsPage />}
+            />
+            <Route
               path="/DegreeQuizMVC/MainDegreeQuizList"
               element={<MicrocredentialQuizList />}
             />
@@ -205,6 +210,10 @@ export default function App() {
               element={<AddEditMicrocredentialQuiz />}
             />
             <Route
+              path="/DegreeQuizMVC/QuizQuestions/:id"
+              element={<MicrocredentialQuizQuestionsPage />}
+            />
+            <Route
               path="/MicrocredentialQuizMVC/MicrocredentialQuizList"
               element={<MicrocredentialQuizList />}
             />
@@ -215,6 +224,10 @@ export default function App() {
             <Route
               path="/MicrocredentialQuizMVC/MicrocredentialQuizEdit/:id"
               element={<AddEditMicrocredentialQuiz />}
+            />
+            <Route
+              path="/MicrocredentialQuizMVC/QuizQuestions/:id"
+              element={<MicrocredentialQuizQuestionsPage />}
             />
             <Route
               path="/microcredential/quiz-result"

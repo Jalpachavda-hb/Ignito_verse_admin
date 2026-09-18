@@ -32,7 +32,8 @@ import {
     buildGetMicrocredentialVideoDetailsByCourseIdInput,
     buildGenerateMicrocredentialCheckpointQuizInput,
     buildGetMicrocredentialCheckpointQuizReportInput,
-    buildGetStudentMicrocredentialQuizResponseInput
+    buildGetStudentMicrocredentialQuizResponseInput,
+    buildDegreeQuizPreviewGetByQuizIdInput
 } from '../dto/input/adminQuizInputs';
 
 import { buildGetStreamDataInput } from '../dto/input/getStreamDataInput';
@@ -82,7 +83,9 @@ import {
     parseGetMicrocredentialCheckpointQuizReportOutput,
     parseGetMicrocredentialCheckpointQuizReportErrorOutput,
     parseGetStudentMicrocredentialQuizResponseOutput,
-    parseGetStudentMicrocredentialQuizResponseErrorOutput
+    parseGetStudentMicrocredentialQuizResponseErrorOutput,
+    parseDegreeQuizPreviewGetByQuizIdOutput,
+    parseDegreeQuizPreviewGetByQuizIdErrorOutput
 } from '../dto/output/adminQuizOutputs';
 
 import { parseGetStreamDataOutput, parseGetStreamDataErrorOutput } from '../dto/output/getStreamDataOutput';
@@ -640,6 +643,37 @@ export async function getDegreeStudentsForSpecialQuizAccess(params = {}) {
 }
 
 /**
+ * 2.10B Get Degree Quiz Preview & Answer Key by Quiz ID
+ * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizPerviewGetByQuizId
+ *
+ * @param {number|object} quizIdOrParams - Quiz ID or parameter object
+ * @returns {Promise<object>} Complete quiz preview with questions and answer options
+ */
+export async function getDegreeQuizPreviewByQuizId(quizIdOrParams) {
+    try {
+        const inputDto = buildDegreeQuizPreviewGetByQuizIdInput(quizIdOrParams);
+        const response = await apiClient('api/DegreeQuizAPI/DegreeQuizPerviewGetByQuizId', {
+            method: 'POST',
+            headers: inputDto.headers,
+            body: inputDto.body
+        });
+
+        if (!response.ok && response.status !== 200) {
+            return parseDegreeQuizPreviewGetByQuizIdErrorOutput(response.data, response.status);
+        }
+
+        return parseDegreeQuizPreviewGetByQuizIdOutput(response.data, response.status);
+    } catch (error) {
+        console.error('Error in getDegreeQuizPreviewByQuizId:', error);
+        return parseDegreeQuizPreviewGetByQuizIdErrorOutput({ message: error.message }, 500);
+    }
+}
+
+export const getDegreeQuizPerviewGetByQuizId = getDegreeQuizPreviewByQuizId;
+export const getDegreeQuizPerviewByQuizId = getDegreeQuizPreviewByQuizId;
+
+
+/**
  * 2.11 Get Microcredential Quiz Categories
  * Endpoint: POST /api/DegreeQuizAPI/MicrocredentialQuizCategoryList
  *
@@ -1035,6 +1069,9 @@ const AdminQuizPageService = {
     degreeQuizQuestionMasterAddUpdate,
     getDegreeStudentsForSpecialQuizAccess,
     getMicrocredentialQuizCategoryList,
+    getDegreeQuizPreviewByQuizId,
+    getDegreeQuizPerviewGetByQuizId,
+    getDegreeQuizPerviewByQuizId,
     checkPublicIpAddress,
     // Section 3
     fetchMicroCourseTopicList,
