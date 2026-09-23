@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.css";
 import PageBreadcrumb from "../common/PageBreadCrumb";
 import PageMeta from "../common/PageMeta";
 import {
@@ -10,18 +12,79 @@ import {
   EyeIcon,
   PencilIcon,
   InfoIcon,
-  CheckLineIcon
+  CheckLineIcon,
+  CalenderIcon
 } from "../../icons";
 
 import {
   fetchPaginatedMicrocredentialQuizList,
   toggleQuizActiveInactiveStatus,
   deleteQuizByQuizId,
-  getMicrocredentialQuizCategoryList
+  getMicrocredentialQuizCategoryList,
+  getStreamsDropdown,
+  getMicrocredentialCoursesByStream,
+  getMicrocredentialModuleByCourseId,
 } from "../../services/AdminQuizPageService";
 
 import QuizPreviewView from "./QuizPreviewView";
 import QuestionMasterModal from "./QuestionMasterModal";
+
+/**
+ * Reusable Themed Date Picker Component based on Flatpickr
+ */
+function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disabled = false }) {
+  const inputRef = useRef(null);
+  const fpRef = useRef(null);
+
+  useEffect(() => {
+    if (!inputRef.current) return;
+    fpRef.current = flatpickr(inputRef.current, {
+      dateFormat: "Y-m-d",
+      static: true,
+      monthSelectorType: "static",
+      defaultDate: value || undefined,
+      clickOpens: true,
+      prevArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      nextArrow:
+        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L12.5 10L7.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      onChange: (selectedDates, dateStr) => {
+        if (onChange) onChange(dateStr);
+      },
+    });
+
+    return () => {
+      if (fpRef.current && !Array.isArray(fpRef.current)) {
+        fpRef.current.destroy();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (fpRef.current) {
+      if (!value) {
+        fpRef.current.clear();
+      } else {
+        fpRef.current.setDate(value, false);
+      }
+    }
+  }, [value]);
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        disabled={disabled}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-3 pr-10 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
+        <CalenderIcon className="size-4" />
+      </span>
+    </div>
+  );
+}
 
 export default function MicrocredentialQuizList() {
   const navigate = useNavigate();
@@ -37,14 +100,132 @@ export default function MicrocredentialQuizList() {
     location.state?.successMessage || ""
   );
 
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+    }
+  }, [location.state]);
+
   // Filters State
   const [filterTitle, setFilterTitle] = useState("");
   const [filterCreater, setFilterCreater] = useState("");
+  const [filterStreamId, setFilterStreamId] = useState(0);
   const [filterStream, setFilterStream] = useState("");
+  const [filterCourseId, setFilterCourseId] = useState(0);
   const [filterMicrocredential, setFilterMicrocredential] = useState("");
-  const [filterModule, setFilterModule] = useState("");
+  const [filterModuleId, setFilterModuleId] = useState(0);
   const [filterDueDate, setFilterDueDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Dropdown Options State
+  const [streamsList, setStreamsList] = useState([]);
+  const [coursesList, setCoursesList] = useState([]);
+  const [modulesList, setModulesList] = useState([]);
+  const [loadingStreams, setLoadingStreams] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingModules, setLoadingModules] = useState(false);
+
+  // Load streams on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadStreams() {
+      setLoadingStreams(true);
+      try {
+        const streamRes = await getStreamsDropdown();
+        if (!isMounted) return;
+        if (streamRes?.success && Array.isArray(streamRes.streamDataList)) {
+          setStreamsList(streamRes.streamDataList);
+        } else if (streamRes?.streamList) {
+          setStreamsList(streamRes.streamList);
+        }
+      } catch (err) {
+        console.warn("Failed to load streams dropdown:", err);
+      } finally {
+        if (isMounted) setLoadingStreams(false);
+      }
+    }
+    loadStreams();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Function to load courses based on streamId
+  const fetchCourses = useCallback(async (streamId = "") => {
+    setLoadingCourses(true);
+    try {
+      const res = await getMicrocredentialCoursesByStream(streamId);
+      const list = res?.microcredentialCourseOutputList || res?.courses || [];
+      if (Array.isArray(list)) {
+        setCoursesList(list);
+      } else {
+        setCoursesList([]);
+      }
+    } catch (err) {
+      console.warn("Failed to load courses:", err);
+      setCoursesList([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  }, []);
+
+  // Initial load for courses (all courses)
+  useEffect(() => {
+    fetchCourses("");
+  }, [fetchCourses]);
+
+  // Function to load modules based on courseId
+  const fetchModules = useCallback(async (courseId = 0) => {
+    if (!courseId) {
+      setModulesList([]);
+      return;
+    }
+    setLoadingModules(true);
+    try {
+      const res = await getMicrocredentialModuleByCourseId(courseId);
+      const list = res?.microcredentialModuleList || res?.modules || [];
+      if (Array.isArray(list)) {
+        setModulesList(list);
+      } else {
+        setModulesList([]);
+      }
+    } catch (err) {
+      console.warn("Failed to load modules:", err);
+      setModulesList([]);
+    } finally {
+      setLoadingModules(false);
+    }
+  }, []);
+
+  // Dropdown Change Handlers
+  const handleStreamChange = (e) => {
+    const sId = Number(e.target.value);
+    setFilterStreamId(sId);
+    const sObj = streamsList.find((s) => Number(s.streamId || s.id) === sId);
+    setFilterStream(sObj ? (sObj.streamName || sObj.name || "") : "");
+
+    // Reset downstream selections
+    setFilterCourseId(0);
+    setFilterMicrocredential("");
+    setFilterModuleId(0);
+    setModulesList([]);
+
+    // Fetch courses for this stream (or all courses if 0)
+    fetchCourses(sId ? String(sId) : "");
+  };
+
+  const handleCourseChange = (e) => {
+    const cId = Number(e.target.value);
+    setFilterCourseId(cId);
+    const cObj = coursesList.find((c) => Number(c.microcredentialCourseId || c.courseId) === cId);
+    setFilterMicrocredential(cObj ? (cObj.microcredentialCourseName || cObj.courseName || "") : "");
+
+    // Reset downstream module
+    setFilterModuleId(0);
+
+    // Fetch modules for this course
+    fetchModules(cId);
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,7 +253,6 @@ export default function MicrocredentialQuizList() {
   const [categoriesList, setCategoriesList] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
 
-
   // ==========================================
   // API: Fetch Main Quizzes
   // ==========================================
@@ -90,9 +270,18 @@ export default function MicrocredentialQuizList() {
         searchInput: searchQuery.trim(),
         educationTypeId: 2, // Microcredential
         quizTitle: filterTitle.trim(),
+        streamId: filterStreamId || 0,
+        StreamId: filterStreamId || 0,
         stream: filterStream.trim(),
+        courseId: filterCourseId || 0,
+        CourseId: filterCourseId || 0,
+        microcredentialCourseId: filterCourseId || 0,
+        MicrocredentialCourseId: filterCourseId || 0,
         microcredentialName: filterMicrocredential.trim(),
-        microcredentialModuleMasterId: Number(filterModule) || 0,
+        microcredentialModuleMasterId: filterModuleId || 0,
+        MicrocredentialModuleMasterId: filterModuleId || 0,
+        moduleMasterId: filterModuleId || 0,
+        ModuleMasterId: filterModuleId || 0,
         quizCreaterName: filterCreater.trim(),
         dueDate: filterDueDate
       };
@@ -114,12 +303,24 @@ export default function MicrocredentialQuizList() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortConfig, searchQuery, filterTitle, filterCreater, filterStream, filterMicrocredential, filterModule, filterDueDate]);
+  }, [
+    currentPage,
+    pageSize,
+    sortConfig,
+    searchQuery,
+    filterTitle,
+    filterCreater,
+    filterStreamId,
+    filterStream,
+    filterCourseId,
+    filterMicrocredential,
+    filterModuleId,
+    filterDueDate,
+  ]);
 
   useEffect(() => {
     loadQuizzes();
   }, [loadQuizzes]);
-
 
   // ==========================================
   // HANDLERS: Filters & Search
@@ -133,11 +334,15 @@ export default function MicrocredentialQuizList() {
   const handleFilterReset = () => {
     setFilterTitle("");
     setFilterCreater("");
+    setFilterStreamId(0);
     setFilterStream("");
+    setFilterCourseId(0);
     setFilterMicrocredential("");
-    setFilterModule("");
+    setFilterModuleId(0);
     setFilterDueDate("");
     setSearchQuery("");
+    setModulesList([]);
+    fetchCourses("");
     setCurrentPage(1);
   };
 
@@ -236,13 +441,7 @@ export default function MicrocredentialQuizList() {
     }
   };
 
-  // Printable Quiz Handler
-  const handlePrintQuiz = (quiz) => {
-    setPreviewingQuiz(quiz);
-    setTimeout(() => {
-      window.print();
-    }, 500);
-  };
+
 
 
   // If in Preview Mode, render full Quiz Preview (Screenshots 2 & 3)
@@ -362,46 +561,80 @@ export default function MicrocredentialQuizList() {
               />
             </div>
 
-            {/* Stream */}
+            {/* Stream Dropdown */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Stream
               </label>
-              <input
-                type="text"
-                value={filterStream}
-                onChange={(e) => setFilterStream(e.target.value)}
-                placeholder="Stream"
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-              />
+              <select
+                value={filterStreamId}
+                onChange={handleStreamChange}
+                disabled={loadingStreams}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+              >
+                <option value={0}>All Streams</option>
+                {streamsList.map((s) => (
+                  <option key={s.streamId || s.id} value={s.streamId || s.id}>
+                    {s.streamName || s.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Microcredential Name */}
+            {/* Course Name Dropdown */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Course Name
               </label>
-              <input
-                type="text"
-                value={filterMicrocredential}
-                onChange={(e) => setFilterMicrocredential(e.target.value)}
-                placeholder="Course name"
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-              />
+              <select
+                value={filterCourseId}
+                onChange={handleCourseChange}
+                disabled={loadingCourses}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+              >
+                <option value={0}>
+                  {loadingCourses ? "Loading courses..." : "All Courses"}
+                </option>
+                {coursesList.map((c) => {
+                  const cId = Number(c.microcredentialCourseId ?? c.courseId ?? 0);
+                  const cTitle = c.microcredentialCourseName || c.courseName || c.name || `Course #${cId}`;
+                  return (
+                    <option key={cId} value={cId}>
+                      {cTitle}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
-            {/* Module Filter */}
+            {/* Module Dropdown */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Module ID / Filter
+                Module
               </label>
-              <input
-                type="number"
-                value={filterModule}
-                onChange={(e) => setFilterModule(e.target.value)}
-                placeholder="Module ID"
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-              />
+              <select
+                value={filterModuleId}
+                onChange={(e) => setFilterModuleId(Number(e.target.value))}
+                disabled={loadingModules}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 cursor-pointer disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
+              >
+                <option value={0}>
+                  {loadingModules
+                    ? "Loading modules..."
+                    : filterCourseId
+                    ? "All Modules"
+                    : "Select Course First"}
+                </option>
+                {modulesList.map((m) => {
+                  const mId = Number(m.microcredentialModuleMasterId ?? m.moduleId ?? 0);
+                  const mTitle = m.moduleName || m.name || `Module #${mId}`;
+                  return (
+                    <option key={mId} value={mId}>
+                      {mTitle}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
             {/* Due Date */}
@@ -409,11 +642,10 @@ export default function MicrocredentialQuizList() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                 Due Date
               </label>
-              <input
-                type="date"
+              <ThemedDatePicker
                 value={filterDueDate}
-                onChange={(e) => setFilterDueDate(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                onChange={(val) => setFilterDueDate(val)}
+                placeholder="YYYY-MM-DD"
               />
             </div>
           </div>
@@ -492,26 +724,6 @@ export default function MicrocredentialQuizList() {
                   Module
                 </th>
 
-                <th
-                  onClick={() => handleSort("GradeOutOf")}
-                  className="cursor-pointer px-5 py-3.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-brand-500"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>GradeOutOf</span>
-                    <span className="text-gray-400 text-[10px]">⇅</span>
-                  </div>
-                </th>
-
-                <th
-                  onClick={() => handleSort("DueDate")}
-                  className="cursor-pointer px-5 py-3.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-brand-500"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>Due Date</span>
-                    <span className="text-gray-400 text-[10px]">⇅</span>
-                  </div>
-                </th>
-
                 <th className="px-5 py-3.5 text-center text-xs font-bold text-gray-600 dark:text-gray-300">
                   Quiz Education Details
                 </th>
@@ -533,14 +745,14 @@ export default function MicrocredentialQuizList() {
             <tbody className="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-transparent">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
                     <div className="inline-block size-6 animate-spin rounded-full border-3 border-brand-500 border-t-transparent mb-2" />
                     <div>Loading quizzes...</div>
                   </td>
                 </tr>
               ) : quizzes.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
                     No microcredential quizzes found. Click <strong>+ Add New Quiz</strong> to create one.
                   </td>
                 </tr>
@@ -574,16 +786,6 @@ export default function MicrocredentialQuizList() {
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
                         )}
-                      </td>
-
-                      {/* GradeOutOf */}
-                      <td className="px-5 py-4 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                        {quiz.gradeOutOf ?? quiz.GradeOutOf ?? 10}
-                      </td>
-
-                      {/* Due Date */}
-                      <td className="px-5 py-4 text-xs text-gray-600 dark:text-gray-300">
-                        {quiz.dueDate || quiz.DueDate || "—"}
                       </td>
 
                       {/* Quiz Education Details */}
@@ -625,7 +827,7 @@ export default function MicrocredentialQuizList() {
                         </button>
                       </td>
 
-                      {/* Actions: Questions, Print, View Preview, Edit, Delete */}
+                      {/* Actions: Questions, View Preview, Edit, Delete */}
                       <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {/* Manage Questions (All 12 Types) Page */}
@@ -641,16 +843,6 @@ export default function MicrocredentialQuizList() {
                             <span>📝</span>
                             <span className="hidden xl:inline">Questions</span>
                           </Link>
-
-                          {/* Print */}
-                          <button
-                            type="button"
-                            onClick={() => handlePrintQuiz(quiz)}
-                            title="Print Quiz"
-                            className="inline-flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300 transition"
-                          >
-                            <span className="text-xs">🖨️</span>
-                          </button>
 
                           {/* View Preview (Screenshots 2 & 3) */}
                           <button

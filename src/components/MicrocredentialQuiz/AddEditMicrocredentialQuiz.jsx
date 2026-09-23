@@ -21,6 +21,49 @@ import {
   finalizeDegreeQuiz,
   fetchPaginatedMicrocredentialQuizList,
 } from "../../services/AdminQuizPageService";
+import QuestionMasterModal from "./QuestionMasterModal";
+
+/**
+ * Normalizes date to clean YYYY-MM-DD string
+ */
+export function formatDateOnly(val) {
+  if (!val) return "";
+  const str = String(val).trim();
+  if (!str) return "";
+  if (str.includes("T")) {
+    return str.split("T")[0];
+  }
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    return str.substring(0, 10);
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return str;
+}
+
+/**
+ * Normalizes time to clean 12-hour hh:mm AM/PM string
+ */
+export function formatTimeOnly(timeVal) {
+  if (!timeVal) return "";
+  const str = String(timeVal).trim();
+  if (!str) return "";
+  if (/am|pm/i.test(str)) return str;
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (match) {
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${String(hour).padStart(2, "0")}:${minute} ${ampm}`;
+  }
+  return str;
+}
 
 /**
  * Reusable Themed Date Picker Component based on Flatpickr
@@ -28,6 +71,7 @@ import {
 function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disabled = false }) {
   const inputRef = useRef(null);
   const fpRef = useRef(null);
+  const cleanDate = formatDateOnly(value);
 
   useEffect(() => {
     if (!inputRef.current) return;
@@ -35,7 +79,7 @@ function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disable
       dateFormat: "Y-m-d",
       static: true,
       monthSelectorType: "static",
-      defaultDate: value || undefined,
+      defaultDate: cleanDate || undefined,
       clickOpens: true,
       prevArrow:
         '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -54,10 +98,10 @@ function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disable
   }, []);
 
   useEffect(() => {
-    if (fpRef.current && value !== undefined) {
-      fpRef.current.setDate(value || "", false);
+    if (fpRef.current && cleanDate !== undefined) {
+      fpRef.current.setDate(cleanDate || "", false);
     }
-  }, [value]);
+  }, [cleanDate]);
 
   return (
     <div className="relative">
@@ -66,6 +110,7 @@ function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disable
         type="text"
         disabled={disabled}
         placeholder={placeholder}
+        defaultValue={cleanDate}
         className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       />
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
@@ -81,6 +126,7 @@ function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disable
 function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabled = false }) {
   const inputRef = useRef(null);
   const fpRef = useRef(null);
+  const cleanTime = formatTimeOnly(value);
 
   useEffect(() => {
     if (!inputRef.current) return;
@@ -89,7 +135,7 @@ function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabl
       noCalendar: true,
       dateFormat: "h:i K", // 12-hour format with AM/PM e.g. "10:00 AM"
       time_24hr: false,
-      defaultDate: value || undefined,
+      defaultDate: cleanTime || undefined,
       clickOpens: true,
       static: true,
       prevArrow:
@@ -109,10 +155,10 @@ function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabl
   }, []);
 
   useEffect(() => {
-    if (fpRef.current && value !== undefined) {
-      fpRef.current.setDate(value || "", false);
+    if (fpRef.current && cleanTime !== undefined) {
+      fpRef.current.setDate(cleanTime || "", false);
     }
-  }, [value]);
+  }, [cleanTime]);
 
   return (
     <div className="relative">
@@ -121,6 +167,7 @@ function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabl
         type="text"
         disabled={disabled}
         placeholder={placeholder}
+        defaultValue={cleanTime}
         className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-3.5 pr-10 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       />
       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
@@ -130,12 +177,21 @@ function ThemedTimePicker({ value, onChange, placeholder = "hh:mm AM/PM", disabl
   );
 }
 
-export default function AddEditMicrocredentialQuiz() {
+export default function AddEditMicrocredentialQuiz({
+  modalMode = false,
+  modalQuiz = null,
+  onModalClose = null,
+  onModalSaved = null,
+} = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams();
 
-  const quizIdParam = params.id ? Number(params.id) : 0;
+  const quizIdParam = modalQuiz
+    ? Number(modalQuiz.quizId || modalQuiz.QuizId || 0)
+    : params.id
+    ? Number(params.id)
+    : 0;
   const isEditMode = Boolean(quizIdParam && quizIdParam > 0);
 
   // Loading & notification states
@@ -145,11 +201,17 @@ export default function AddEditMicrocredentialQuiz() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
 
   // Dropdown options
   const [streams, setStreams] = useState([]);
   const [courses, setCourses] = useState([]);
   const [modules, setModules] = useState([]);
+
+  // Cached display names for smooth pre-fill in edit mode
+  const [cachedCourseName, setCachedCourseName] = useState("");
+  const [cachedModuleName, setCachedModuleName] = useState("");
+  const [cachedStreamName, setCachedStreamName] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -158,6 +220,9 @@ export default function AddEditMicrocredentialQuiz() {
     streamId: 0,
     microcredentialCourseId: 0,
     microcredentialModuleMasterId: 0,
+    courseId: 0,
+    courseDetailsId: 0,
+    moduleMasterId: 0,
     yearRange: "2026 - 2027",
     quizTitle: "",
     gradeOutOf: 10,
@@ -182,6 +247,7 @@ export default function AddEditMicrocredentialQuiz() {
     password: "",
     // Attempts & Category (Category defaults to 1)
     attemptsAllowed: 1,
+    attemptTry: 1,
     categoryId: 1,
     // Evaluation & Feedback
     deductPoints: false,
@@ -190,238 +256,486 @@ export default function AddEditMicrocredentialQuiz() {
     syncToGradeBook: true,
   });
 
-  // Load static streams on mount
+  // Coordinated mount & edit pre-fill initialization
   useEffect(() => {
     let isMounted = true;
 
-    async function loadStreams() {
+    async function init() {
+      setLoadingInitial(true);
+      let currentStreams = [];
+
+      // Step 1: Ensure streams are available first
       try {
         const streamRes = await getStreamsDropdown();
-        if (!isMounted) return;
-
         if (streamRes?.success && Array.isArray(streamRes.streamDataList)) {
-          setStreams(streamRes.streamDataList);
+          currentStreams = streamRes.streamDataList;
         } else if (streamRes?.streamList) {
-          setStreams(streamRes.streamList);
+          currentStreams = streamRes.streamList;
         }
+        if (isMounted) setStreams(currentStreams);
       } catch (err) {
-        console.warn("Failed to load stream dropdown:", err);
-      }
-    }
-
-    loadStreams();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Pre-fill when editing
-  useEffect(() => {
-    if (!isEditMode) return;
-    let isMounted = true;
-
-    async function loadExistingQuizData() {
-      setLoadingInitial(true);
-
-      // Primary source: getDegreeQuizDetailsByQuizId
-      try {
-        const detailRes = await getDegreeQuizDetailsByQuizId(quizIdParam);
-        if (isMounted && detailRes?.success && detailRes.quizDetails) {
-          applyQuizData(detailRes.quizDetails);
-          setLoadingInitial(false);
-          return;
-        }
-      } catch (dErr) {
-        console.warn("getDegreeQuizDetailsByQuizId failed, trying fallback:", dErr);
+        console.warn("Failed to load streams in quiz init:", err);
       }
 
-      const stateQuiz = location.state?.quiz || location.state?.item;
+      // Step 2: In Edit Mode, load quiz details
+      if (isEditMode) {
+        let existingQuiz = null;
 
-      if (stateQuiz) {
-        applyQuizData(stateQuiz);
-        setLoadingInitial(false);
-        return;
-      }
+        if (modalQuiz) {
+          existingQuiz = modalQuiz;
+        } else {
+          try {
+            const detailRes = await getDegreeQuizDetailsByQuizId(quizIdParam);
+            if (detailRes?.success && (detailRes.quizDetails || detailRes.quizMaster)) {
+              existingQuiz = detailRes.quizDetails || detailRes.quizMaster;
+            }
+          } catch (dErr) {
+            console.warn("getDegreeQuizDetailsByQuizId failed, using fallback:", dErr);
+          }
 
-      // If not in state, attempt to fetch from quiz list
-      try {
-        const res = await fetchPaginatedMicrocredentialQuizList({
-          pageNo: 1,
-          pageSize: 100,
-          educationTypeId: 2,
-        });
+          if (!existingQuiz && (location.state?.quiz || location.state?.item)) {
+            existingQuiz = location.state?.quiz || location.state?.item;
+          }
 
-        if (isMounted && (res?.quizDegreeList || res?.degreeQuizList)) {
-          const list = res.quizDegreeList || res.degreeQuizList || [];
-          const found = list.find(
-            (q) => Number(q.quizId || q.QuizId) === Number(quizIdParam)
-          );
-          if (found) {
-            applyQuizData(found);
+          if (!existingQuiz) {
+            try {
+              const res = await fetchPaginatedMicrocredentialQuizList({
+                pageNo: 1,
+                pageSize: 100,
+                educationTypeId: 2,
+              });
+              const list = res?.quizDegreeList || res?.degreeQuizList || [];
+              existingQuiz = list.find(
+                (q) => Number(q.quizId || q.QuizId) === Number(quizIdParam)
+              );
+            } catch (err) {
+              console.warn("Could not find quiz in list:", err);
+            }
           }
         }
-      } catch (err) {
-        console.warn("Could not find quiz in list:", err);
-      } finally {
-        if (isMounted) setLoadingInitial(false);
+
+        if (isMounted && existingQuiz) {
+          await applyQuizData(existingQuiz, currentStreams);
+        }
       }
+
+      if (isMounted) setLoadingInitial(false);
     }
 
-    function applyQuizData(q) {
-      let resolvedStreamId = q.streamId || q.StreamId || 0;
-      if (!resolvedStreamId && (q.streamName || q.stream) && streams.length > 0) {
-        const matched = streams.find(
-          (s) =>
-            (s.streamName || s.name)?.toLowerCase() ===
-            (q.streamName || q.stream)?.toLowerCase()
+    async function applyQuizData(q, streamsAvailable = []) {
+      if (!q) return;
+
+      let resolvedCourseId = Number(
+        q.microcredentialCourseId ??
+        q.MicrocredentialCourseId ??
+        q.courseId ??
+        q.CourseId ??
+        q.courseDetailsId ??
+        q.CourseDetailsId ??
+        q.quizCourseId ??
+        q.QuizCourseId ??
+        q.courseMasterId ??
+        q.CourseMasterId ??
+        q.microCourseId ??
+        q.MicroCourseId ??
+        q.microcredentialCourseDetailId ??
+        q.MicrocredentialCourseDetailId ??
+        q.course_id ??
+        q.Course_Id ??
+        q.rawDetails?.microcredentialCourseId ??
+        q.rawDetails?.MicrocredentialCourseId ??
+        q.rawDetails?.courseId ??
+        q.rawDetails?.CourseId ??
+        q.rawDetails?.courseDetailsId ??
+        q.rawDetails?.CourseDetailsId ??
+        q.rawDetails?.courseMasterId ??
+        q.rawDetails?.microCourseId ??
+        0
+      );
+
+      const resolvedModuleId = Number(
+        q.microcredentialModuleMasterId ??
+        q.MicrocredentialModuleMasterId ??
+        q.moduleMasterId ??
+        q.ModuleMasterId ??
+        q.moduleId ??
+        q.ModuleId ??
+        q.rawDetails?.microcredentialModuleMasterId ??
+        q.rawDetails?.moduleMasterId ??
+        0
+      );
+
+      const cName =
+        q.microcredentialCourseName ||
+        q.MicrocredentialCourseName ||
+        q.courseName ||
+        q.CourseName ||
+        q.microcredentialName ||
+        q.MicrocredentialName ||
+        q.rawDetails?.microcredentialCourseName ||
+        q.rawDetails?.courseName ||
+        "";
+      const mName = q.moduleName || q.ModuleName || q.rawDetails?.moduleName || "";
+      const sName = q.streamName || q.StreamName || q.stream || q.rawDetails?.streamName || "";
+
+      if (cName) setCachedCourseName(cName);
+      if (mName) setCachedModuleName(mName);
+      if (sName) setCachedStreamName(sName);
+
+      const streamsPool = (Array.isArray(streamsAvailable) && streamsAvailable.length > 0)
+        ? streamsAvailable
+        : streams;
+
+      let resolvedStreamId = Number(q.streamId ?? q.StreamId ?? q.rawDetails?.streamId ?? 0);
+
+      // Match stream by name if streamId is 0
+      if (!resolvedStreamId && sName && streamsPool.length > 0) {
+        const matched = streamsPool.find(
+          (s) => (s.streamName || s.name)?.trim().toLowerCase() === sName.trim().toLowerCase()
         );
-        if (matched) resolvedStreamId = matched.streamId || matched.id || 0;
+        if (matched) resolvedStreamId = Number(matched.streamId || matched.id || 0);
       }
 
-      setFormData((prev) => ({
-        ...prev,
+      let loadedCourses = [];
+
+      // If streamId is still 0 but we have a courseId, search streams for this course
+      if (!resolvedStreamId && resolvedCourseId > 0 && streamsPool.length > 0) {
+        for (const s of streamsPool) {
+          const sId = Number(s.streamId || s.id);
+          if (!sId) continue;
+          try {
+            const cRes = await getMicrocredentialCoursesByStream(sId);
+            const cList = cRes?.microcredentialCourseOutputList || cRes?.courses || [];
+            if (cList.some((c) => Number(c.microcredentialCourseId || c.courseId || c.id) === resolvedCourseId)) {
+              resolvedStreamId = sId;
+              loadedCourses = cList;
+              setCourses(cList);
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      // Fetch courses for the resolved stream if not loaded yet
+      if (resolvedStreamId > 0 && loadedCourses.length === 0) {
+        try {
+          const cRes = await getMicrocredentialCoursesByStream(resolvedStreamId);
+          const cList = cRes?.microcredentialCourseOutputList || cRes?.courses || [];
+          if (Array.isArray(cList) && cList.length > 0) {
+            loadedCourses = cList;
+            setCourses(cList);
+          }
+        } catch (err) {
+          console.warn("Failed fetching courses for resolved stream:", err);
+        }
+      }
+
+      // If courseId is 0 but we have course name, match against loaded courses
+      if (!resolvedCourseId && cName && loadedCourses.length > 0) {
+        const matchedCourse = loadedCourses.find(
+          (c) => (c.microcredentialCourseName || c.courseName || c.name)?.trim().toLowerCase() === cName.trim().toLowerCase()
+        );
+        if (matchedCourse) {
+          resolvedCourseId = Number(matchedCourse.microcredentialCourseId || matchedCourse.courseId || matchedCourse.id || 0);
+        }
+      }
+
+      // If courseId is still 0, but we have a moduleId or moduleName, find which course owns this module
+      if (!resolvedCourseId && (resolvedModuleId > 0 || mName) && loadedCourses.length > 0) {
+        for (const c of loadedCourses) {
+          const cId = Number(c.microcredentialCourseId || c.courseId || c.id || 0);
+          if (!cId) continue;
+          try {
+            const modRes = await getMicrocredentialModuleByCourseId(cId);
+            const mList = modRes?.microcredentialModuleList || modRes?.modules || [];
+            const hasModule = mList.some(
+              (m) =>
+                (resolvedModuleId > 0 && Number(m.microcredentialModuleMasterId ?? m.moduleId ?? m.id) === resolvedModuleId) ||
+                (mName && (m.moduleName || m.name)?.trim().toLowerCase() === mName.trim().toLowerCase())
+            );
+            if (hasModule) {
+              resolvedCourseId = cId;
+              setModules(mList);
+              if (!cName) {
+                const foundName = c.microcredentialCourseName || c.courseName || c.name || "";
+                if (foundName) setCachedCourseName(foundName);
+              }
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      // Fetch modules for the resolved course if not loaded yet
+      if (resolvedCourseId > 0 && modules.length === 0) {
+        try {
+          const modRes = await getMicrocredentialModuleByCourseId(resolvedCourseId);
+          const mList = modRes?.microcredentialModuleList || modRes?.modules || [];
+          if (Array.isArray(mList) && mList.length > 0) {
+            setModules(mList);
+          }
+        } catch (err) {
+          console.warn("Failed fetching modules for resolved course:", err);
+        }
+      }
+
+      // Resolve Real Dates and Times with intelligent fallbacks
+      const rawDueDate =
+        q.dueDate ||
+        q.DueDate ||
+        q.rawDetails?.dueDate ||
+        q.rawDetails?.DueDate ||
+        "";
+
+      const rawStartDate =
+        q.startDate ||
+        q.StartDate ||
+        q.startDateTime ||
+        q.StartDateTime ||
+        q.quizStartDate ||
+        q.QuizStartDate ||
+        q.fromDate ||
+        q.FromDate ||
+        q.quizFromDate ||
+        q.rawDetails?.startDate ||
+        q.rawDetails?.StartDate ||
+        q.rawDetails?.startDateTime ||
+        q.rawDetails?.StartDateTime ||
+        q.rawDetails?.quizStartDate ||
+        q.rawDetails?.QuizStartDate ||
+        q.rawDetails?.fromDate ||
+        q.rawDetails?.FromDate ||
+        rawDueDate ||
+        "";
+
+      const rawEndDate =
+        q.endDate ||
+        q.EndDate ||
+        q.endDateTime ||
+        q.EndDateTime ||
+        q.quizEndDate ||
+        q.QuizEndDate ||
+        q.toDate ||
+        q.ToDate ||
+        q.quizToDate ||
+        q.rawDetails?.endDate ||
+        q.rawDetails?.EndDate ||
+        q.rawDetails?.endDateTime ||
+        q.rawDetails?.EndDateTime ||
+        q.rawDetails?.quizEndDate ||
+        q.rawDetails?.QuizEndDate ||
+        q.rawDetails?.toDate ||
+        q.rawDetails?.ToDate ||
+        rawDueDate ||
+        "";
+
+      const rawStartTime =
+        q.startTime ||
+        q.StartTime ||
+        q.quizStartTime ||
+        q.QuizStartTime ||
+        q.fromTime ||
+        q.FromTime ||
+        q.rawDetails?.startTime ||
+        q.rawDetails?.StartTime ||
+        (rawStartDate && rawStartDate.includes("T") ? rawStartDate.split("T")[1]?.substring(0, 5) : "") ||
+        "10:00";
+
+      const rawEndTime =
+        q.endTime ||
+        q.EndTime ||
+        q.quizEndTime ||
+        q.QuizEndTime ||
+        q.toTime ||
+        q.ToTime ||
+        q.rawDetails?.endTime ||
+        q.rawDetails?.EndTime ||
+        (rawEndDate && rawEndDate.includes("T") ? rawEndDate.split("T")[1]?.substring(0, 5) : "") ||
+        "18:00";
+
+      const resolvedAttempts = Number(
+        q.attemptsAllowed ??
+        q.AttemptsAllowed ??
+        q.noOfAttempts ??
+        q.NoOfAttempts ??
+        q.rawDetails?.attemptsAllowed ??
+        q.rawDetails?.AttemptsAllowed ??
+        q.rawDetails?.noOfAttempts ??
+        q.rawDetails?.NoOfAttempts ??
+        q.attemptsTry ??
+        q.AttemptsTry ??
+        q.rawDetails?.attemptsTry ??
+        q.rawDetails?.AttemptsTry ??
+        q.attempts ??
+        q.Attempts ??
+        q.totalAttempt ??
+        q.TotalAttempt ??
+        q.attemptLimit ??
+        q.AttemptLimit ??
+        q.rawDetails?.attempts ??
+        q.rawDetails?.Attempts ??
+        q.rawDetails?.totalAttempt ??
+        q.rawDetails?.TotalAttempt ??
+        q.attemptTry ??
+        q.AttemptTry ??
+        q.rawDetails?.attemptTry ??
+        q.rawDetails?.AttemptTry ??
+        1
+      );
+
+      const cleanStartDate = formatDateOnly(rawStartDate);
+      const cleanEndDate = formatDateOnly(rawEndDate);
+      const cleanDueDate = formatDateOnly(rawDueDate);
+      const cleanStartTime = formatTimeOnly(rawStartTime);
+      const cleanEndTime = formatTimeOnly(rawEndTime);
+
+      setFormData({
         quizId: quizIdParam,
-        educationTypeId: q.educationTypeId || q.EducationTypeId || 2,
-        streamId: Number(resolvedStreamId) || prev.streamId || 0,
-        microcredentialCourseId:
-          Number(q.microcredentialCourseId || q.MicrocredentialCourseId || 0),
-        microcredentialModuleMasterId:
-          Number(q.microcredentialModuleMasterId || q.MicrocredentialModuleMasterId || 0),
-        yearRange: q.yearRange || "2026 - 2027",
+        educationTypeId: Number(q.educationTypeId || q.EducationTypeId || 2),
+        streamId: resolvedStreamId,
+        microcredentialCourseId: resolvedCourseId,
+        microcredentialModuleMasterId: resolvedModuleId,
+        courseId: resolvedCourseId,
+        courseDetailsId: resolvedCourseId,
+        quizCourseId: resolvedCourseId,
+        moduleMasterId: resolvedModuleId,
+        moduleId: resolvedModuleId,
+        yearRange: q.yearRange || q.YearRange || "2026 - 2027",
         quizTitle: q.quizTitle || q.QuizTitle || "",
-        gradeOutOf: q.gradeOutOf ?? q.GradeOutOf ?? 10,
-        gradeBook: q.gradeBook || "In Grade Book",
-        dueDate: q.dueDate || q.DueDate || "",
+        gradeOutOf: Number(q.gradeOutOf ?? q.GradeOutOf ?? 10),
+        gradeBook: q.gradeBook || q.GradeBook || "In Grade Book",
+        dueDate: cleanDueDate,
         quizDescription: q.quizDescription || q.QuizDescription || "",
-        hasTimeLimit: Boolean(q.hasTimeLimit ?? true),
-        timeLimitMinutes: q.timeLimitMinutes || 120,
-        questionsPerPageId: q.questionsPerPageId || 1,
+        hasTimeLimit: Boolean(q.hasTimeLimit ?? q.HasTimeLimit ?? true),
+        timeLimitMinutes: q.timeLimitMinutes ?? q.TimeLimitMinutes ?? 120,
+        questionsPerPageId: q.questionsPerPageId ?? q.QuestionsPerPageId ?? 1,
         preventPreviousBackNavigation: Boolean(
-          q.preventPreviousBackNavigation ?? true
+          q.preventPreviousBackNavigation ?? q.PreventPreviousBackNavigation ?? true
         ),
         shuffleQuestionsAndSections: Boolean(
-          q.shuffleQuestionsAndSections ?? false
+          q.shuffleQuestionsAndSections ?? q.ShuffleQuestionsAndSections ?? false
         ),
-        allowHints: Boolean(q.allowHints ?? true),
-        disableInternalMessages: Boolean(q.disableInternalMessages ?? false),
-        headerDescription: q.headerDescription || "",
-        footerDescription: q.footerDescription || "",
-        startDate: q.startDate || "",
-        startTime: q.startTime || "10:00",
-        endDate: q.endDate || "",
-        endTime: q.endTime || "18:00",
-        password: q.password || "",
-        attemptsAllowed: q.attemptsAllowed || 1,
-        categoryId: 1,
-        deductPoints: Boolean(q.deductPoints ?? false),
-        deductionInPercentage: q.deductionInPercentage || 0,
-        autoPublishResults: Boolean(q.autoPublishResults ?? true),
-        syncToGradeBook: Boolean(q.syncToGradeBook ?? true),
-      }));
+        allowHints: Boolean(q.allowHints ?? q.AllowHints ?? true),
+        disableInternalMessages: Boolean(q.disableInternalMessages ?? q.DisableInternalMessages ?? false),
+        headerDescription: q.headerDescription || q.HeaderDescription || "",
+        footerDescription: q.footerDescription || q.FooterDescription || "",
+        startDate: cleanStartDate,
+        startTime: cleanStartTime,
+        endDate: cleanEndDate,
+        endTime: cleanEndTime,
+        password: q.password || q.Password || "",
+        attemptsAllowed: resolvedAttempts,
+        attemptTry: resolvedAttempts,
+        categoryId: q.categoryId ?? q.CategoryId ?? 1,
+        deductPoints: Boolean(q.deductPoints ?? q.DeductPoints ?? false),
+        deductionInPercentage: q.deductionInPercentage ?? q.DeductionInPercentage ?? 0,
+        autoPublishResults: Boolean(q.autoPublishResults ?? q.AutoPublishResults ?? true),
+        syncToGradeBook: Boolean(q.syncToGradeBook ?? q.SyncToGradeBook ?? true),
+      });
     }
 
-    loadExistingQuizData();
+    init();
 
     return () => {
       isMounted = false;
     };
-  }, [isEditMode, quizIdParam, streams]);
-
-  // Load courses when streamId changes
-  useEffect(() => {
-    if (!formData.streamId) {
-      setCourses([]);
-      return;
-    }
-
-    let isMounted = true;
-    async function loadCourses() {
-      setLoadingCourses(true);
-      try {
-        const res = await getMicrocredentialCoursesByStream(formData.streamId);
-        const list = res?.microcredentialCourseOutputList || res?.courses || [];
-        if (isMounted && Array.isArray(list)) {
-          setCourses(list);
-        } else if (isMounted) {
-          setCourses([]);
-        }
-      } catch (err) {
-        console.warn("Error fetching courses for stream:", err);
-        if (isMounted) setCourses([]);
-      } finally {
-        if (isMounted) setLoadingCourses(false);
-      }
-    }
-
-    loadCourses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [formData.streamId]);
-
-  // Load modules when microcredentialCourseId changes
-  useEffect(() => {
-    if (!formData.microcredentialCourseId) {
-      setModules([]);
-      return;
-    }
-
-    let isMounted = true;
-    async function loadModules() {
-      setLoadingModules(true);
-      try {
-        const res = await getMicrocredentialModuleByCourseId(formData.microcredentialCourseId);
-        const list = res?.microcredentialModuleList || res?.modules || [];
-        if (isMounted && Array.isArray(list)) {
-          setModules(list);
-        } else if (isMounted) {
-          setModules([]);
-        }
-      } catch (err) {
-        console.warn("Error fetching modules for course:", err);
-        if (isMounted) setModules([]);
-      } finally {
-        if (isMounted) setLoadingModules(false);
-      }
-    }
-
-    loadModules();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [formData.microcredentialCourseId]);
+  }, [isEditMode, quizIdParam, modalQuiz]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleStreamChange = (e) => {
+  const handleStreamChange = async (e) => {
     const sId = Number(e.target.value);
+    const selectedObj = streams.find(
+      (s) => Number(s.streamId || s.id) === sId
+    );
+    const sName = selectedObj?.streamName || selectedObj?.name || "";
+    if (sName) setCachedStreamName(sName);
+
     setFormData((prev) => ({
       ...prev,
       streamId: sId,
       microcredentialCourseId: 0,
+      courseId: 0,
+      courseDetailsId: 0,
+      quizCourseId: 0,
       microcredentialModuleMasterId: 0,
+      moduleMasterId: 0,
+      moduleId: 0,
     }));
     setCourses([]);
     setModules([]);
+    setCachedCourseName("");
+    setCachedModuleName("");
+
+    if (sId > 0) {
+      setLoadingCourses(true);
+      try {
+        const res = await getMicrocredentialCoursesByStream(sId);
+        const list = res?.microcredentialCourseOutputList || res?.courses || [];
+        setCourses(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.warn("Error fetching courses for stream:", err);
+        setCourses([]);
+      } finally {
+        setLoadingCourses(false);
+      }
+    }
   };
 
-  const handleCourseChange = (e) => {
+  const handleCourseChange = async (e) => {
     const cId = Number(e.target.value);
+    const selectedObj = courses.find(
+      (c) => Number(c.microcredentialCourseId || c.courseId) === cId
+    );
+    const cName = selectedObj?.microcredentialCourseName || selectedObj?.courseName || "";
+    if (cName) setCachedCourseName(cName);
+
     setFormData((prev) => ({
       ...prev,
       microcredentialCourseId: cId,
+      courseId: cId,
+      courseDetailsId: cId,
+      quizCourseId: cId,
       microcredentialModuleMasterId: 0,
+      moduleMasterId: 0,
+      moduleId: 0,
     }));
     setModules([]);
+    setCachedModuleName("");
+
+    if (cId > 0) {
+      setLoadingModules(true);
+      try {
+        const res = await getMicrocredentialModuleByCourseId(cId);
+        const list = res?.microcredentialModuleList || res?.modules || [];
+        setModules(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.warn("Error fetching modules for course:", err);
+        setModules([]);
+      } finally {
+        setLoadingModules(false);
+      }
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleModuleChange = (e) => {
+    const mId = Number(e.target.value);
+    const selectedObj = modules.find(
+      (m) => Number(m.microcredentialModuleMasterId ?? m.moduleId) === mId
+    );
+    if (selectedObj?.moduleName) setCachedModuleName(selectedObj.moduleName);
+    setFormData((prev) => ({
+      ...prev,
+      microcredentialModuleMasterId: mId,
+      moduleMasterId: mId,
+      moduleId: mId,
+    }));
+  };
+
+  const handleSubmit = async (e, actionType = "continue") => {
+    if (e && e.preventDefault) e.preventDefault();
 
     if (!formData.quizTitle.trim()) {
       setErrorMessage("Please enter a Quiz Title.");
@@ -440,18 +754,65 @@ export default function AddEditMicrocredentialQuiz() {
     setSuccessMessage("");
 
     try {
+      const resolvedCourseId = Number(
+        formData.microcredentialCourseId || formData.courseId || 0
+      );
+      const resolvedModuleId = Number(
+        formData.microcredentialModuleMasterId || formData.moduleMasterId || 0
+      );
+      const resolvedStreamId = Number(formData.streamId || 0);
+
       const payload = {
         ...formData,
-        categoryId: 1, // Default 1 passed in payload
+        quizId: Number(formData.quizId || 0),
+        QuizId: Number(formData.quizId || 0),
+        streamId: resolvedStreamId,
+        StreamId: resolvedStreamId,
+        courseId: resolvedCourseId,
+        CourseId: resolvedCourseId,
+        courseDetailsId: resolvedCourseId,
+        CourseDetailsId: resolvedCourseId,
+        microcredentialCourseId: resolvedCourseId,
+        MicrocredentialCourseId: resolvedCourseId,
+        quizCourseId: resolvedCourseId,
+        QuizCourseId: resolvedCourseId,
+        moduleMasterId: resolvedModuleId,
+        ModuleMasterId: resolvedModuleId,
+        microcredentialModuleMasterId: resolvedModuleId,
+        MicrocredentialModuleMasterId: resolvedModuleId,
+        moduleId: resolvedModuleId,
+        ModuleId: resolvedModuleId,
+        categoryId: 1,
+        CategoryId: 1,
         yearRange: formData.yearRange || "2026 - 2027",
         gradeOutOf: Number(formData.gradeOutOf) || 10,
         gradeBook: formData.gradeBook || "In Grade Book",
-        dueDate: formData.dueDate || "",
+        dueDate: formatDateOnly(formData.dueDate || formData.endDate),
+        DueDate: formatDateOnly(formData.dueDate || formData.endDate),
+        startDate: formatDateOnly(formData.startDate || formData.dueDate),
+        StartDate: formatDateOnly(formData.startDate || formData.dueDate),
+        endDate: formatDateOnly(formData.endDate || formData.dueDate),
+        EndDate: formatDateOnly(formData.endDate || formData.dueDate),
+        startTime: formatTimeOnly(formData.startTime) || "10:00",
+        StartTime: formatTimeOnly(formData.startTime) || "10:00",
+        endTime: formatTimeOnly(formData.endTime) || "18:00",
+        EndTime: formatTimeOnly(formData.endTime) || "18:00",
         password: formData.password || "",
-        attemptsAllowed: Number(formData.attemptsAllowed) || 1,
+        attemptsAllowed: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        AttemptsAllowed: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        attemptTry: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        AttemptTry: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        attemptsTry: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        AttemptsTry: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        noOfAttempts: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        NoOfAttempts: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        totalAttempt: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        TotalAttempt: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        attempts: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
+        Attempts: Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1),
       };
 
-      // Step 1: Save Quiz Master
+      // Step 1: Save Quiz Master (Only saves basic detail)
       const masterRes = await saveDegreeQuizMaster(payload);
       if (!masterRes || masterRes.success === false) {
         setErrorMessage(masterRes?.message || "Failed to save Quiz Master.");
@@ -460,26 +821,40 @@ export default function AddEditMicrocredentialQuiz() {
         return;
       }
 
-      const assignedQuizId = Number(masterRes.quizId || formData.quizId);
+      const assignedQuizId = Number(
+        masterRes.quizId ||
+        masterRes.QuizId ||
+        masterRes.id ||
+        formData.quizId ||
+        quizIdParam
+      );
 
-      // Step 2: Finalize Quiz Settings
-      try {
-        const finalizeRes = await finalizeDegreeQuiz({
-          ...payload,
-          quizId: assignedQuizId,
+      if (modalMode) {
+        setSuccessMessage("Quiz saved successfully.");
+        if (onModalSaved) onModalSaved({ quizId: assignedQuizId, ...payload });
+        if (onModalClose) onModalClose();
+        return;
+      }
+
+      if (actionType === "close") {
+        navigate("/microcredential/quiz", {
+          state: {
+            successMessage: isEditMode
+              ? "Quiz updated successfully."
+              : "Quiz created successfully.",
+          },
         });
-        if (finalizeRes && finalizeRes.success === false) {
-          console.warn("finalizeDegreeQuiz notice:", finalizeRes.message);
-        }
-      } catch (fErr) {
-        console.warn("finalizeDegreeQuiz error:", fErr);
+        return;
       }
 
       // Redirect to full-page Quiz Questions Manager
       navigate(`/microcredential/quiz-questions/${assignedQuizId}`, {
         state: {
           quizTitle: formData.quizTitle,
-          fromAdd: true,
+          fromAdd: !isEditMode,
+          successMessage: isEditMode
+            ? "Quiz updated successfully."
+            : "Quiz created successfully.",
         },
       });
     } catch (err) {
@@ -527,15 +902,18 @@ export default function AddEditMicrocredentialQuiz() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {formData.quizId > 0 && (
-            <button
-              type="button"
-              onClick={() => setIsQuestionModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 shadow-xs hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 transition"
+          {(formData.quizId > 0 || isEditMode) && (
+            <Link
+              to={`/microcredential/quiz-questions/${quizIdParam || formData.quizId}`}
+              state={{
+                quizTitle: formData.quizTitle,
+                moduleName: cachedModuleName,
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 shadow-xs hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 transition cursor-pointer"
             >
               <span>📝</span>
-              <span>Manage Questions (12 Types)</span>
-            </button>
+              <span>Manage Questions</span>
+            </Link>
           )}
 
           <Link
@@ -615,7 +993,7 @@ export default function AddEditMicrocredentialQuiz() {
                 Microcredential Course <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.microcredentialCourseId}
+                value={Number(formData.microcredentialCourseId || formData.courseId || 0)}
                 onChange={handleCourseChange}
                 disabled={loadingCourses}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
@@ -627,17 +1005,21 @@ export default function AddEditMicrocredentialQuiz() {
                     ? "-- Select Microcredential Course --"
                     : "-- Select Stream First --"}
                 </option>
-                {courses.map((c) => (
-                  <option key={c.microcredentialCourseId} value={c.microcredentialCourseId}>
-                    {c.microcredentialCourseName || c.courseName}
-                  </option>
-                ))}
-                {formData.microcredentialCourseId > 0 &&
+                {courses.map((c) => {
+                  const cId = Number(c.microcredentialCourseId ?? c.courseId ?? c.id ?? 0);
+                  const cTitle = c.microcredentialCourseName || c.courseName || c.name || `Course #${cId}`;
+                  return (
+                    <option key={cId} value={cId}>
+                      {cTitle}
+                    </option>
+                  );
+                })}
+                {(Number(formData.microcredentialCourseId) > 0 || Number(formData.courseId) > 0) &&
                   !courses.some(
-                    (c) => Number(c.microcredentialCourseId) === Number(formData.microcredentialCourseId)
+                    (c) => Number(c.microcredentialCourseId ?? c.courseId ?? c.id) === Number(formData.microcredentialCourseId || formData.courseId)
                   ) && (
-                    <option value={formData.microcredentialCourseId}>
-                      Course #{formData.microcredentialCourseId}
+                    <option value={Number(formData.microcredentialCourseId || formData.courseId)}>
+                      {cachedCourseName || `Course #${formData.microcredentialCourseId || formData.courseId}`}
                     </option>
                   )}
               </select>
@@ -649,8 +1031,8 @@ export default function AddEditMicrocredentialQuiz() {
                 Microcredential Module <span className="text-red-500">*</span>
               </label>
               <select
-                value={formData.microcredentialModuleMasterId}
-                onChange={(e) => handleChange("microcredentialModuleMasterId", Number(e.target.value))}
+                value={formData.microcredentialModuleMasterId || formData.moduleMasterId || 0}
+                onChange={handleModuleChange}
                 disabled={loadingModules}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/60"
               >
@@ -661,17 +1043,23 @@ export default function AddEditMicrocredentialQuiz() {
                     ? "-- Select Module --"
                     : "-- Select Course First --"}
                 </option>
-                {modules.map((m) => (
-                  <option key={m.microcredentialModuleMasterId} value={m.microcredentialModuleMasterId}>
-                    {m.moduleName}
-                  </option>
-                ))}
-                {formData.microcredentialModuleMasterId > 0 &&
+                {modules.map((m) => {
+                  const mId = Number(m.microcredentialModuleMasterId ?? m.moduleId ?? 0);
+                  const mTitle = m.moduleName || m.name || `Module #${mId}`;
+                  return (
+                    <option key={mId} value={mId}>
+                      {mTitle}
+                    </option>
+                  );
+                })}
+                {(formData.microcredentialModuleMasterId > 0 || formData.moduleMasterId > 0) &&
                   !modules.some(
-                    (m) => Number(m.microcredentialModuleMasterId) === Number(formData.microcredentialModuleMasterId)
+                    (m) =>
+                      Number(m.microcredentialModuleMasterId ?? m.moduleId) ===
+                      Number(formData.microcredentialModuleMasterId || formData.moduleMasterId)
                   ) && (
-                    <option value={formData.microcredentialModuleMasterId}>
-                      Module #{formData.microcredentialModuleMasterId}
+                    <option value={formData.microcredentialModuleMasterId || formData.moduleMasterId}>
+                      {cachedModuleName || `Module #${formData.microcredentialModuleMasterId || formData.moduleMasterId}`}
                     </option>
                   )}
               </select>
@@ -692,6 +1080,8 @@ export default function AddEditMicrocredentialQuiz() {
               className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
             />
           </div>
+
+
 
           {/* Description */}
           <div className="mt-5">
@@ -885,15 +1275,33 @@ export default function AddEditMicrocredentialQuiz() {
                 Attempts Allowed
               </label>
               <select
-                value={formData.attemptsAllowed}
-                onChange={(e) => handleChange("attemptsAllowed", Number(e.target.value))}
+                value={Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  const cleanVal = isNaN(val) ? 1 : val;
+                  setFormData((prev) => ({
+                    ...prev,
+                    attemptsAllowed: cleanVal,
+                    AttemptsAllowed: cleanVal,
+                    attemptTry: cleanVal,
+                    AttemptTry: cleanVal,
+                    noOfAttempts: cleanVal,
+                    NoOfAttempts: cleanVal,
+                  }));
+                }}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
               >
+                <option value={0}>Unlimited Attempts</option>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                   <option key={num} value={num}>
                     {num} {num === 1 ? "Attempt Only" : "Attempts"}
                   </option>
                 ))}
+                {Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1) > 10 && (
+                  <option value={Number(formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry ?? 1)}>
+                    {formData.attemptsAllowed ?? formData.AttemptsAllowed ?? formData.attemptTry} Attempts
+                  </option>
+                )}
               </select>
             </div>
           </div>
@@ -908,7 +1316,7 @@ export default function AddEditMicrocredentialQuiz() {
             Configure automatic scoring, grade publishing, and grade book synchronization.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
               <input
                 type="checkbox"
@@ -918,18 +1326,6 @@ export default function AddEditMicrocredentialQuiz() {
               />
               <span className="text-xs font-medium text-gray-800 dark:text-white">
                 Auto-Publish Results Immediately
-              </span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40">
-              <input
-                type="checkbox"
-                checked={formData.syncToGradeBook}
-                onChange={(e) => handleChange("syncToGradeBook", e.target.checked)}
-                className="rounded border-gray-300 text-brand-500 focus:ring-brand-400"
-              />
-              <span className="text-xs font-medium text-gray-800 dark:text-white">
-                Sync to Grade Book
               </span>
             </label>
 
@@ -956,41 +1352,113 @@ export default function AddEditMicrocredentialQuiz() {
             Cancel
           </Link>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-2.5 text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition shadow-xs flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <>
-                <svg
-                  className="animate-spin size-3.5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8H4z"
-                  />
-                </svg>
-                <span>Saving...</span>
-              </>
-            ) : (
-              <span>Next</span>
-            )}
-          </button>
+          {isEditMode ? (
+            <>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e, "close")}
+                className="px-5 py-2.5 text-xs font-semibold text-gray-800 dark:text-gray-100 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Update Quiz"}
+              </button>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e, "continue")}
+                className="px-6 py-2.5 text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <svg
+                      className="animate-spin size-3.5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      />
+                    </svg>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Update & Manage Questions ➔</span>
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e, "close")}
+                className="px-5 py-2.5 text-xs font-semibold text-gray-800 dark:text-gray-100 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {saving ? "Saving..." : "Save Quiz"}
+              </button>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e, "continue")}
+                className="px-6 py-2.5 text-xs font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl transition shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <svg
+                      className="animate-spin size-3.5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      />
+                    </svg>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>Save & Add Questions ➔</span>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </form>
+
+      {/* Question Master Modal */}
+      {isQuestionModalOpen && (
+        <QuestionMasterModal
+          isOpen={isQuestionModalOpen}
+          onClose={() => setIsQuestionModalOpen(false)}
+          quiz={{
+            quizId: formData.quizId,
+            quizTitle: formData.quizTitle,
+          }}
+        />
+      )}
     </div>
   );
 }

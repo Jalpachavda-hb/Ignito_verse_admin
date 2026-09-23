@@ -2,6 +2,8 @@
  * Centralized API Client for making HTTP requests to .NET Web API.
  */
 
+import { clearAuthSession, isSessionExpired, STORAGE_TOKEN_KEY } from './sessionManager';
+
 const DEFAULT_API_GATEWAY_URL = 'https://1ejrtfddba.execute-api.ap-south-1.amazonaws.com/default/api';
 
 // In production, fallback to the AWS API Gateway backend if VITE_API_BASE_URL is not set
@@ -42,11 +44,9 @@ async function parseFetchResponse(res, options = {}) {
     }
   }
 
-  // Auto-clean stale token & user if 401 occurs on protected endpoint
+  // Auto-clean stale session credentials if 401 occurs on protected endpoint
   if (res.status === 401) {
-    localStorage.removeItem('ignito_auth_token');
-    localStorage.removeItem('ignito_auth_user');
-    localStorage.removeItem('ignito_admin_id');
+    clearAuthSession();
   }
 
   return {
@@ -94,8 +94,21 @@ export async function apiClient(endpoint, options = {}) {
 
   // Only attach token if endpoint is not explicitly marked public and header not disabled
   const isExplicitPublic = options.isPublic === true || options.requiresAuth === false;
+
+  // Enforce session timeout: If session is expired on an authenticated call, clear and return 401 immediately
+  if (!isExplicitPublic && isSessionExpired()) {
+    clearAuthSession();
+    return {
+      data: { message: 'Session expired after 2 hours. Please log in again.' },
+      status: 401,
+      statusText: 'Unauthorized - Session Expired',
+      ok: false,
+      headers: new Headers(),
+    };
+  }
+
   if (!isExplicitPublic && !headers['Authorization']) {
-    const token = localStorage.getItem('ignito_auth_token');
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

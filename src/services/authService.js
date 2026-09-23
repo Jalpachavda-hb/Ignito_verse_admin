@@ -1,6 +1,7 @@
 /**
  * AUTHENTICATION SERVICE
  * Connects Login UI with .NET Web API using Input and Output Parameter DTOs.
+ * Enforces a 2-hour session expiration rule for admin security.
  */
 
 import { apiClient } from './apiClient';
@@ -9,10 +10,40 @@ import {
   parseValidateAdminCredentialOutput,
   parseValidateAdminCredentialErrorOutput,
 } from '../dto/output/validateAdminCredentialOutput';
+import {
+  saveAuthSession,
+  clearAuthSession,
+  isAuthenticated as checkIsAuthenticated,
+  getSavedUserSession as checkSavedUserSession,
+  getAdminProfile as checkAdminProfile,
+  getSavedAdminId as checkSavedAdminId,
+  isSessionExpired as checkSessionExpired,
+  getSessionRemainingTime as checkSessionRemainingTime,
+  SESSION_DURATION_MS
+} from './sessionManager';
 
-const STORAGE_TOKEN_KEY = 'ignito_auth_token';
-const STORAGE_USER_KEY = 'ignito_auth_user';
-const STORAGE_ADMIN_ID_KEY = 'ignito_admin_id';
+// Re-export session management utilities and constants for backward compatibility
+export {
+  SESSION_DURATION_MS,
+  saveAuthSession,
+  clearAuthSession
+};
+
+/**
+ * Checks if session has passed the 2-hour timeout limit.
+ * @returns {boolean}
+ */
+export function isSessionExpired() {
+  return checkSessionExpired();
+}
+
+/**
+ * Gets remaining time before session expires in milliseconds.
+ * @returns {number}
+ */
+export function getSessionRemainingTime() {
+  return checkSessionRemainingTime();
+}
 
 /**
  * Authenticates admin against .NET Web API (ValidateAdminCredential).
@@ -41,17 +72,13 @@ export async function validateAdminCredential(emailOrUsername, password) {
 
     const outputDto = parseValidateAdminCredentialOutput(response.data, response.status);
 
-    // 3. Save session token and admin info on success
+    // 3. Save session token and admin info with 2-hour session timestamp on success
     if (outputDto.success) {
-      if (outputDto.token) {
-        localStorage.setItem(STORAGE_TOKEN_KEY, outputDto.token);
-      }
-      if (outputDto.user) {
-        localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(outputDto.user));
-      }
-      if (outputDto.adminId) {
-        localStorage.setItem(STORAGE_ADMIN_ID_KEY, String(outputDto.adminId));
-      }
+      saveAuthSession({
+        token: outputDto.token,
+        user: outputDto.user,
+        adminId: outputDto.adminId
+      });
     }
 
     return outputDto;
@@ -72,67 +99,34 @@ export async function loginUser(email, password) {
  * Logs out user and clears local session.
  */
 export function logoutUser() {
-  localStorage.removeItem(STORAGE_TOKEN_KEY);
-  localStorage.removeItem(STORAGE_USER_KEY);
-  localStorage.removeItem(STORAGE_ADMIN_ID_KEY);
+  clearAuthSession();
 }
 
 /**
- * Checks if admin has an active authenticated session.
- * @returns {boolean} True if authenticated, false otherwise.
+ * Checks if admin has an active authenticated session within the 2-hour lifetime.
+ * @returns {boolean} True if authenticated and session is fresh, false otherwise.
  */
 export function isAuthenticated() {
-  try {
-    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
-    const user = localStorage.getItem(STORAGE_USER_KEY);
-    return Boolean(token || user);
-  } catch {
-    return false;
-  }
+  return checkIsAuthenticated();
 }
 
 /**
  * Gets currently logged in user session from localStorage if available.
  */
 export function getSavedUserSession() {
-  try {
-    const raw = localStorage.getItem(STORAGE_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  return checkSavedUserSession();
 }
 
 /**
  * Gets normalized admin profile data from saved session.
  */
 export function getAdminProfile() {
-  const user = getSavedUserSession();
-  const firstName = user?.firstName || (user?.fullName ? user.fullName.split(' ')[0] : 'Admin');
-  const lastName = user?.lastName || (user?.fullName && user.fullName.split(' ').length > 1 ? user.fullName.split(' ').slice(1).join(' ') : '');
-  return {
-    adminId: user?.adminId || user?.id || 1,
-    firstName: firstName || 'Admin',
-    lastName: lastName || '',
-    fullName: user?.fullName || `${firstName} ${lastName}`.trim() || 'Admin User',
-    emailId: user?.emailId || user?.email || 'admin@ignitoverse.com',
-    mobileNumber: user?.mobileNumber || '',
-    profileImage: user?.profileImage || user?.avatar || '',
-    adminRoleName: user?.adminRoleName || user?.role || 'Administrator',
-    dashboardPath: user?.dashboardPath || '/',
-    adminDashboardId: user?.adminDashboardId || 1,
-    adminPermissionsList: user?.adminPermissionsList || []
-  };
+  return checkAdminProfile();
 }
 
 /**
  * Gets currently logged in admin ID from localStorage.
  */
 export function getSavedAdminId() {
-  try {
-    const adminId = localStorage.getItem(STORAGE_ADMIN_ID_KEY);
-    return adminId ? Number(adminId) : 1;
-  } catch {
-    return 1;
-  }
+  return checkSavedAdminId();
 }

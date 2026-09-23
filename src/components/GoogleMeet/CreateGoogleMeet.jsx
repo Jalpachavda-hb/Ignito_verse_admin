@@ -8,9 +8,11 @@ import {
   getStreamData,
   getMicrocredentialCourse,
 } from "../../services/adminMicrocredentialService";
+import { useToast } from "../../context/ToastContext";
 
 export default function CreateGoogleMeet() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Dropdown data states
   const [streamList, setStreamList] = useState([]);
@@ -23,7 +25,6 @@ export default function CreateGoogleMeet() {
 
   // Submitting & Feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   // Form State (Programme Type defaults to 'Microcredential' internally)
   const [formData, setFormData] = useState({
@@ -37,14 +38,6 @@ export default function CreateGoogleMeet() {
     isPrivateMeeting: false,
     isReminderSet: true,
   });
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage("");
-      navigate("/google-meet-list");
-    }, 1200);
-  };
 
   // 1. Load Stream List on mount
   useEffect(() => {
@@ -120,19 +113,19 @@ export default function CreateGoogleMeet() {
     e.preventDefault();
 
     if (!selectedStreamId) {
-      alert("Please select a Stream");
+      showToast("Please select a Stream", "error");
       return;
     }
     if (!formData.microcredentialCourseId) {
-      alert("Please select a Microcredential Course");
+      showToast("Please select a Microcredential Course", "error");
       return;
     }
     if (!formData.summary.trim()) {
-      alert("Please enter Meet Title / Summary");
+      showToast("Please enter Meet Title / Summary", "error");
       return;
     }
     if (!formData.startDateTime || !formData.endDateTime) {
-      alert("Please enter both Start Date & Time and End Date & Time");
+      showToast("Please enter both Start Date & Time and End Date & Time", "error");
       return;
     }
 
@@ -151,13 +144,16 @@ export default function CreateGoogleMeet() {
       });
 
       if (res?.isSuccess) {
-        showToast(res.message || "Google Meet scheduled successfully!");
+        showToast(res.message || "Google Meet scheduled successfully!", "success");
+        setTimeout(() => {
+          navigate("/google-meet-list");
+        }, 1200);
       } else {
-        alert(res?.message || "Failed to schedule Google Meet. Please try again.");
+        showToast(res?.message || "Failed to schedule Google Meet. Please try again.", "error");
       }
     } catch (err) {
       console.error("Create Google Meet error:", err);
-      alert("An unexpected error occurred while scheduling the meeting.");
+      showToast("An unexpected error occurred while scheduling the meeting.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -171,13 +167,6 @@ export default function CreateGoogleMeet() {
       />
 
       <PageBreadcrumb pageTitle="Schedule Google Meet" />
-
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircleIcon className="size-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Form Card */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xs dark:border-gray-800 dark:bg-gray-900">

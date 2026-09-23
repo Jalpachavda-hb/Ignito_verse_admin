@@ -18,9 +18,11 @@ import {
   getGoogleMeetAttendees,
   getGoogleMeetRecordingAndAttendeeInfo,
 } from "../../services/microcredentialGoogleMeetService";
+import { useToast } from "../../context/ToastContext";
 
 export default function GoogleMeetList() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [meets, setMeets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,21 +46,14 @@ export default function GoogleMeetList() {
   const [deleteConfirmMeet, setDeleteConfirmMeet] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Toast message
-  const [toastMessage, setToastMessage] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3500);
-  };
 
   const handleCopy = (text, key) => {
     if (!text) return;
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(text);
       setCopiedKey(key);
-      showToast(`Copied to clipboard!`);
+      showToast("Copied to clipboard!", "success");
       setTimeout(() => setCopiedKey(null), 2000);
     }
   };
@@ -90,11 +85,11 @@ export default function GoogleMeetList() {
       }
     } catch (err) {
       console.error("Failed to fetch Google Meet list:", err);
-      showToast("Error loading meetings from server");
+      showToast("Error loading meetings from server", "error");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortField, sortOrder]);
+  }, [currentPage, pageSize, sortField, sortOrder, showToast]);
 
   useEffect(() => {
     fetchMeets();
@@ -110,15 +105,15 @@ export default function GoogleMeetList() {
       });
 
       if (res?.isSuccess) {
-        showToast("Google Meet removed successfully.");
+        showToast("Google Meet removed successfully.", "success");
         setDeleteConfirmMeet(null);
         fetchMeets();
       } else {
-        alert(res?.message || "Failed to delete meeting.");
+        showToast(res?.message || "Failed to delete meeting.", "error");
       }
     } catch (err) {
       console.error("Delete meet error:", err);
-      alert("Error deleting meeting.");
+      showToast("Error deleting meeting.", "error");
     } finally {
       setIsDeleting(false);
     }
@@ -138,6 +133,7 @@ export default function GoogleMeetList() {
       }
     } catch (err) {
       console.error("Error loading attendees:", err);
+      showToast("Failed to load attendees list.", "error");
     } finally {
       setLoadingAttendees(false);
     }
@@ -148,7 +144,7 @@ export default function GoogleMeetList() {
     setViewingRecording(meet);
     setRecordingInfo(null);
     if (!meet.eventId) {
-      showToast("No Google Calendar Event ID linked for this meeting");
+      showToast("No Google Calendar Event ID linked for this meeting", "warning");
       return;
     }
     try {
@@ -157,10 +153,11 @@ export default function GoogleMeetList() {
       if (res?.isSuccess) {
         setRecordingInfo(res);
       } else {
-        showToast(res?.message || "No recording or RSVP details found yet");
+        showToast(res?.message || "No recording or RSVP details found yet", "info");
       }
     } catch (err) {
       console.error("Error fetching recording details:", err);
+      showToast("Failed to fetch recording details.", "error");
     } finally {
       setLoadingRecording(false);
     }
@@ -190,14 +187,6 @@ export default function GoogleMeetList() {
       />
 
       <PageBreadcrumb pageTitle="Google Meet List" />
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircleIcon className="size-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Container Card */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">

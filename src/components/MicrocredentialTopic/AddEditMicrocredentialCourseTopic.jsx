@@ -170,7 +170,8 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
       }
 
       // Also try fetching student documents if separate
-      const studentDocsRes = await getMicrocredentialStudentDownloadDocuments(courseId);
+      const targetModId = Number(location.state?.moduleId || location.state?.item?.microcredentialModuleMasterId || 0);
+      const studentDocsRes = await getMicrocredentialStudentDownloadDocuments(courseId, targetModId);
       if (studentDocsRes && studentDocsRes.success) {
         const list =
           studentDocsRes.adminGetMicrocredentialStudentDownloadDocumentsData ||
@@ -295,7 +296,8 @@ export default function AddEditMicrocredentialCourseTopic({ isEdit: propIsEdit }
         populateExistingTopics(res);
       }
 
-      const docsRes = await getMicrocredentialStudentDownloadDocuments(courseId);
+      const targetModId = Number(location.state?.moduleId || location.state?.item?.microcredentialModuleMasterId || 0);
+      const docsRes = await getMicrocredentialStudentDownloadDocuments(courseId, targetModId);
       if (docsRes && docsRes.success) {
         const list =
           docsRes.adminGetMicrocredentialStudentDownloadDocumentsData ||

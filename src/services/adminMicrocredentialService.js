@@ -667,12 +667,13 @@ export async function microCourseTopicDelete(microcredentialCourseId = 0, adminI
  * Fetches downloadable student documents for a microcredential course.
  * API: POST /api/IgnitoMicroCredencialAPI/GetMicrocredentialStudentDownloadDocuments
  * 
- * @param {number} [microcredentialCourseId=0] - Microcredential course ID
+ * @param {number|object} [microcredentialCourseId=0] - Microcredential course ID or param object
+ * @param {number} [microcredentialModuleMasterId=0] - Microcredential module master ID
  * @returns {Promise<object>} Parsed output containing `{ success, adminGetMicrocredentialStudentDownloadDocumentsData, message, status, rawData }`
  */
-export async function getMicrocredentialStudentDownloadDocuments(microcredentialCourseId = 0) {
+export async function getMicrocredentialStudentDownloadDocuments(microcredentialCourseId = 0, microcredentialModuleMasterId = 0) {
     try {
-        const inputDto = buildGetMicrocredentialStudentDownloadDocumentsInput(microcredentialCourseId);
+        const inputDto = buildGetMicrocredentialStudentDownloadDocumentsInput(microcredentialCourseId, microcredentialModuleMasterId);
         const response = await apiClient('api/IgnitoMicroCredencialAPI/GetMicrocredentialStudentDownloadDocuments', {
             method: 'POST',
             headers: inputDto.headers,

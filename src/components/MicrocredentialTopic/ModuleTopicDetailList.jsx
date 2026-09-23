@@ -18,12 +18,14 @@ import {
   PencilIcon,
   AngleLeftIcon,
   FileIcon,
+  CopyIcon,
 } from "../../icons";
 import {
   getMicrocredentialTopicByModuleId,
   microCourseTopicDelete,
   logJsError,
 } from "../../services/adminMicrocredentialService";
+import { useToast } from "../../context/ToastContext";
 
 export default function ModuleTopicDetailList() {
   const navigate = useNavigate();
@@ -65,18 +67,39 @@ export default function ModuleTopicDetailList() {
   const [deleteModalItem, setDeleteModalItem] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Auto-dismiss success notification
+  const { showToast } = useToast();
+
+  // Show toast notification on mount if passed in location state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      showToast(location.state.successMessage, "success");
+    }
+    if (location.state?.errorMessage) {
+      showToast(location.state.errorMessage, "error");
+    }
+  }, [location.state, showToast]);
+
+  // Auto-dismiss inline notifications
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 4000);
+      const timer = setTimeout(() => setSuccessMessage(""), 4500);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
   // Fetch topics for this specific module via GetMicrocredentialTopicByModuleId
-  const fetchTopics = useCallback(async () => {
+  const fetchTopics = useCallback(async (isManualRefresh = false) => {
     if (!moduleId) {
-      setErrorMessage("No Module ID specified. Please select a module to view its topics.");
+      const msg = "No Module ID specified. Please select a module to view its topics.";
+      setErrorMessage(msg);
+      showToast(msg, "error");
       return;
     }
 
@@ -89,26 +112,79 @@ export default function ModuleTopicDetailList() {
       if (response && (response.success !== false || Array.isArray(response.microcredentialTopicList))) {
         const list = response.microcredentialTopicList || [];
         setTopicList(Array.isArray(list) ? list : []);
+        if (isManualRefresh) {
+          showToast(`Topics refreshed (${(list || []).length} topics loaded)`, "success");
+        }
       } else if (response?.message || response?.errorDescription) {
         const msg = response.message || response.errorDescription;
         setErrorMessage(msg);
+        showToast(msg, "error");
         logJsError(msg, "", "ModuleTopicDetailList.jsx fetchTopics");
       } else {
         setTopicList([]);
+        if (isManualRefresh) {
+          showToast("No topics found for this module.", "info");
+        }
       }
     } catch (err) {
       console.error("Error in fetchTopics:", err);
       const msg = err.message || "An unexpected error occurred while fetching module topics.";
       setErrorMessage(msg);
+      showToast(msg, "error");
       logJsError(msg, err.stack, "ModuleTopicDetailList.jsx fetchTopics");
     } finally {
       setLoading(false);
     }
-  }, [moduleId]);
+  }, [moduleId, showToast]);
 
   useEffect(() => {
     fetchTopics();
   }, [fetchTopics]);
+
+  // Delete Topic handler
+  const handleDeleteConfirm = async () => {
+    if (!deleteModalItem) return;
+    setDeleting(true);
+
+    try {
+      const targetCourseId = Number(
+        effectiveCourseId ||
+        deleteModalItem.microcredentialCourseId ||
+        deleteModalItem.MicrocredentialCourseId ||
+        0
+      );
+
+      const res = await microCourseTopicDelete(targetCourseId, 1);
+      if (res && res.success !== false) {
+        const msg = res.message || `Topic "${deleteModalItem.topicName}" deleted successfully.`;
+        setSuccessMessage(msg);
+        showToast(msg, "success");
+        setDeleteModalItem(null);
+        fetchTopics();
+      } else {
+        const msg = res?.message || res?.errorDescription || "Failed to delete topic.";
+        setErrorMessage(msg);
+        showToast(msg, "error");
+      }
+    } catch (err) {
+      console.error("Error deleting topic:", err);
+      const msg = err.message || "An unexpected error occurred while deleting the topic.";
+      setErrorMessage(msg);
+      showToast(msg, "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCopyText = (text, label) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text);
+      showToast(`${label} copied to clipboard!`, "success");
+    } catch (e) {
+      showToast("Unable to copy to clipboard", "error");
+    }
+  };
 
   // Effective Course ID
   const effectiveCourseId =
@@ -303,7 +379,7 @@ export default function ModuleTopicDetailList() {
 
             <button
               type="button"
-              onClick={fetchTopics}
+              onClick={() => fetchTopics(true)}
               disabled={loading}
               className="ml-2 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               title="Refresh topics"
@@ -333,13 +409,16 @@ export default function ModuleTopicDetailList() {
                 <TableCell isHeader className="w-40 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Duration / Time
                 </TableCell>
+                <TableCell isHeader className="w-28 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-gray-500">
+                  <TableCell colSpan={6} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="size-6 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
                       <span className="text-sm">Loading module topics...</span>
@@ -348,7 +427,7 @@ export default function ModuleTopicDetailList() {
                 </TableRow>
               ) : paginatedTopics.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
+                  <TableCell colSpan={6} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">
                     {searchQuery
                       ? "No topics match your search."
                       : "No topics found for this module. Click '+ Add Topic' or 'Edit Module Topics' above to add topics."}
@@ -388,7 +467,7 @@ export default function ModuleTopicDetailList() {
                             <button
                               type="button"
                               onClick={() => setActiveVideoUrl(item.topicVideoUrl)}
-                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 w-fit"
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 w-fit cursor-pointer"
                             >
                               <EyeIcon className="size-3.5" />
                               <span>Watch Video</span>
@@ -425,6 +504,51 @@ export default function ModuleTopicDetailList() {
                         ) : (
                           <span>—</span>
                         )}
+                      </TableCell>
+
+                      {/* 6. Actions */}
+                      <TableCell className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {hasVideo && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(item.topicVideoUrl, "Video URL")}
+                              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 cursor-pointer"
+                              title="Copy Video URL"
+                            >
+                              <CopyIcon className="size-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/microcredential/topic-edit/${effectiveCourseId || 0}`, {
+                                state: {
+                                  courseId: effectiveCourseId,
+                                  courseName,
+                                  streamId,
+                                  streamName,
+                                  moduleId,
+                                  moduleName,
+                                  isCourseLocked: true,
+                                  isModuleLocked: true,
+                                },
+                              })
+                            }
+                            className="rounded-lg p-1.5 text-purple-600 hover:bg-purple-50 hover:text-purple-800 dark:text-purple-400 dark:hover:bg-purple-950/40 cursor-pointer"
+                            title="Edit Module Topics"
+                          >
+                            <PencilIcon className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteModalItem(item)}
+                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 cursor-pointer"
+                            title="Delete Topic"
+                          >
+                            <TrashBinIcon className="size-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

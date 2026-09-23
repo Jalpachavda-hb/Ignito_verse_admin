@@ -10,9 +10,11 @@ import {
   VideoIcon,
 } from "../../icons";
 import { getZoomMeetingList } from "../../services/microcredentialZoomService";
+import { useToast } from "../../context/ToastContext";
 
 export default function ZoomMeetingList() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,19 +27,11 @@ export default function ZoomMeetingList() {
   const [sortField, setSortField] = useState("CreateMeetingZoomId");
   const [sortAsc, setSortAsc] = useState(false);
 
-  // Toast State
-  const [toastMessage, setToastMessage] = useState("");
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3500);
-  };
-
   const handleCopy = (text, label) => {
     if (!text) return;
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(text);
-      showToast(`${label} copied to clipboard!`);
+      showToast(`${label} copied to clipboard!`, "success");
     }
   };
 
@@ -78,11 +72,11 @@ export default function ZoomMeetingList() {
       }
     } catch (err) {
       console.error("Failed to fetch Zoom meetings:", err);
-      showToast("Error loading Zoom meetings from server");
+      showToast("Error loading Zoom meetings from server", "error");
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, sortField, sortAsc, searchTerm]);
+  }, [currentPage, pageSize, sortField, sortAsc, searchTerm, showToast]);
 
   useEffect(() => {
     fetchMeetings();
@@ -112,14 +106,6 @@ export default function ZoomMeetingList() {
       />
 
       <PageBreadcrumb pageTitle="Zoom Meeting List" />
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircleIcon className="size-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Table Card */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900">

@@ -8,6 +8,7 @@ import {
   getStreamData,
   getMicrocredentialCourse,
 } from "../../services/adminMicrocredentialService";
+import { useToast } from "../../context/ToastContext";
 
 const MEETING_TYPES = [
   { value: "scheduled", label: "Scheduled Meeting" },
@@ -21,6 +22,7 @@ const MEETING_TYPES = [
 
 export default function CreateZoomMeeting() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Dropdown states
   const [streamList, setStreamList] = useState([]);
@@ -31,7 +33,6 @@ export default function CreateZoomMeeting() {
 
   // Submitting & Feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,14 +43,6 @@ export default function CreateZoomMeeting() {
     duration: 60,
     isPrivate: false,
   });
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage("");
-      navigate("/zoom-meeting-list");
-    }, 1200);
-  };
 
   // 1. Fetch Streams on mount
   useEffect(() => {
@@ -123,19 +116,19 @@ export default function CreateZoomMeeting() {
     e.preventDefault();
 
     if (!selectedStreamId) {
-      alert("Please select a Stream");
+      showToast("Please select a Stream", "error");
       return;
     }
     if (!formData.microcredentialCourseId) {
-      alert("Please select a Microcredential Course");
+      showToast("Please select a Microcredential Course", "error");
       return;
     }
     if (!formData.meetingName.trim()) {
-      alert("Please enter Meeting Name");
+      showToast("Please enter Meeting Name", "error");
       return;
     }
     if (!formData.meetingDateAndTime) {
-      alert("Please select Meeting Date & Time");
+      showToast("Please select Meeting Date & Time", "error");
       return;
     }
 
@@ -151,13 +144,16 @@ export default function CreateZoomMeeting() {
       });
 
       if (res?.isSuccess) {
-        showToast(res.message || "Zoom meeting created successfully!");
+        showToast(res.message || "Zoom meeting created successfully!", "success");
+        setTimeout(() => {
+          navigate("/zoom-meeting-list");
+        }, 1200);
       } else {
-        alert(res?.message || "Failed to create Zoom meeting. Please try again.");
+        showToast(res?.message || "Failed to create Zoom meeting. Please try again.", "error");
       }
     } catch (err) {
       console.error("Create Zoom Meeting error:", err);
-      alert("An unexpected error occurred while creating the Zoom meeting.");
+      showToast("An unexpected error occurred while creating the Zoom meeting.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -171,13 +167,6 @@ export default function CreateZoomMeeting() {
       />
 
       <PageBreadcrumb pageTitle="Create Zoom Meeting" />
-
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircleIcon className="size-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Create Form Card */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xs dark:border-gray-800 dark:bg-gray-900">

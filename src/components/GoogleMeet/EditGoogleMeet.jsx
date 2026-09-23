@@ -11,10 +11,12 @@ import {
   getStreamData,
   getMicrocredentialCourse,
 } from "../../services/adminMicrocredentialService";
+import { useToast } from "../../context/ToastContext";
 
 export default function EditGoogleMeet() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Dropdown states
   const [streamList, setStreamList] = useState([]);
@@ -26,7 +28,6 @@ export default function EditGoogleMeet() {
 
   // Submitting & Feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -40,14 +41,6 @@ export default function EditGoogleMeet() {
     isPrivateMeeting: false,
     isReminderSet: true,
   });
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage("");
-      navigate("/google-meet-list");
-    }, 1200);
-  };
 
   // 1. Fetch Streams
   useEffect(() => {
@@ -107,7 +100,7 @@ export default function EditGoogleMeet() {
       }
     } catch (err) {
       console.error("Failed to fetch meeting details:", err);
-      alert("Error loading meeting details.");
+      showToast("Error loading meeting details.", "error");
     } finally {
       setLoadingData(false);
     }
@@ -163,15 +156,15 @@ export default function EditGoogleMeet() {
     e.preventDefault();
 
     if (!formData.microcredentialCourseId) {
-      alert("Please select a Microcredential Course");
+      showToast("Please select a Microcredential Course", "error");
       return;
     }
     if (!formData.summary.trim()) {
-      alert("Please enter Meet Title / Summary");
+      showToast("Please enter Meet Title / Summary", "error");
       return;
     }
     if (!formData.startDateTime || !formData.endDateTime) {
-      alert("Please enter both Start Date & Time and End Date & Time");
+      showToast("Please enter both Start Date & Time and End Date & Time", "error");
       return;
     }
 
@@ -190,13 +183,16 @@ export default function EditGoogleMeet() {
       });
 
       if (res?.isSuccess) {
-        showToast(res.message || "Google Meet updated successfully!");
+        showToast(res.message || "Google Meet updated successfully!", "success");
+        setTimeout(() => {
+          navigate("/google-meet-list");
+        }, 1200);
       } else {
-        alert(res?.message || "Failed to update Google Meet. Please try again.");
+        showToast(res?.message || "Failed to update Google Meet. Please try again.", "error");
       }
     } catch (err) {
       console.error("Update Google Meet error:", err);
-      alert("An unexpected error occurred while updating the meeting.");
+      showToast("An unexpected error occurred while updating the meeting.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -210,13 +206,6 @@ export default function EditGoogleMeet() {
       />
 
       <PageBreadcrumb pageTitle="Edit Google Meet" />
-
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-xs font-semibold text-white shadow-2xl animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircleIcon className="size-4 text-emerald-400" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Form Card */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xs dark:border-gray-800 dark:bg-gray-900">

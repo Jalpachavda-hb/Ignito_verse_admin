@@ -18,9 +18,11 @@ import {
   TimeIcon,
 } from "../../icons";
 import { getGoogleCalendarEventList } from "../../services/microcredentialGoogleCalendarService";
+import { useToast } from "../../context/ToastContext";
 
 export default function GoogleCalendarList() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("calendar"); // "calendar" | "table"
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -32,19 +34,13 @@ export default function GoogleCalendarList() {
 
   // Modals state
   const [viewingEvent, setViewingEvent] = useState(null);
-  const [toastMessage, setToastMessage] = useState("");
   const [copiedKey, setCopiedKey] = useState(null);
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3500);
-  };
 
   const handleCopy = (text, key) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    showToast(`Copied ID: ${text}`);
+    showToast(`Copied ID: ${text}`, "success");
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -66,6 +62,7 @@ export default function GoogleCalendarList() {
       }
     } catch (err) {
       console.error("Error fetching Google Calendar events:", err);
+      showToast("Error loading Google Calendar events.", "error");
       setEvents([]);
     } finally {
       setLoading(false);
@@ -115,14 +112,6 @@ export default function GoogleCalendarList() {
         description="View and synchronize academic calendar events, lectures, and live sessions."
       />
       <PageBreadcrumb pageTitle="Google Calender" />
-
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-2xl dark:bg-white dark:text-gray-900 animate-in fade-in slide-in-from-bottom-3">
-          <CheckCircleIcon className="size-5 text-emerald-400 dark:text-emerald-600" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Container */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900 w-full max-w-full min-w-0 overflow-hidden">

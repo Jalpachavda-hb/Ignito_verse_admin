@@ -35,6 +35,7 @@ export default function EditMicrocredentialCourseTopic() {
   const queryCourseId = Number(
     searchParams.get("MicrocredentialCourseId") ||
     searchParams.get("microcredentialCourseId") ||
+    searchParams.get("courseId") ||
     searchParams.get("id") ||
     0
   );
@@ -44,7 +45,7 @@ export default function EditMicrocredentialCourseTopic() {
     location.state?.item?.MicrocredentialCourseId ||
     0
   );
-  const courseId = params.id ? Number(params.id) : (queryCourseId || stateCourseId || 0);
+  const paramCourseId = params.id ? Number(params.id) : 0;
 
   // Extract moduleId from params, query, or state
   const queryModuleId = Number(
@@ -60,18 +61,40 @@ export default function EditMicrocredentialCourseTopic() {
     0
   );
   const paramModuleId = params.moduleId ? Number(params.moduleId) : 0;
-  const initialModuleId = paramModuleId || queryModuleId || stateModuleId;
+
+  // Check sessionStorage for last cached edit context
+  let cachedEditContext = null;
+  const lookupKey = paramModuleId || queryModuleId || stateModuleId || paramCourseId || queryCourseId || stateCourseId;
+  if (lookupKey) {
+    try {
+      const stored = sessionStorage.getItem(`ignito_edit_topic_ctx_${lookupKey}`) || sessionStorage.getItem("ignito_edit_topic_ctx_last");
+      if (stored) cachedEditContext = JSON.parse(stored);
+    } catch {}
+  }
+
+  const courseId = paramCourseId || queryCourseId || stateCourseId || cachedEditContext?.courseId || 0;
+  const initialModuleId = paramModuleId || queryModuleId || stateModuleId || cachedEditContext?.moduleId || 0;
 
   // Passed context values for pre-selection / locking
   const passedCourseName =
     location.state?.courseName ||
     location.state?.item?.microcredentialCourseName ||
+    searchParams.get("courseName") ||
+    cachedEditContext?.courseName ||
     "";
-  const passedStreamId = location.state?.streamId ? String(location.state.streamId) : "";
-  const passedStreamName = location.state?.streamName || "";
+  const passedStreamId = location.state?.streamId
+    ? String(location.state.streamId)
+    : (searchParams.get("streamId") || (cachedEditContext?.streamId ? String(cachedEditContext.streamId) : ""));
+  const passedStreamName =
+    location.state?.streamName ||
+    searchParams.get("streamName") ||
+    cachedEditContext?.streamName ||
+    "";
   const passedModuleName =
     location.state?.moduleName ||
     location.state?.item?.moduleName ||
+    searchParams.get("moduleName") ||
+    cachedEditContext?.moduleName ||
     "";
 
   const isCourseLocked = Boolean(
@@ -214,7 +237,10 @@ export default function EditMicrocredentialCourseTopic() {
 
           // Fetch student download documents
           try {
-            const docsRes = await getMicrocredentialStudentDownloadDocuments(targetCourseId);
+            const docsRes = await getMicrocredentialStudentDownloadDocuments(
+              Number(targetCourseId),
+              Number(targetModuleId || 0)
+            );
             const list =
               docsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
               docsRes?.microcredentialStudentDownloadDocumentList ||
@@ -302,6 +328,23 @@ export default function EditMicrocredentialCourseTopic() {
             }
           }
         }
+
+        // Save to sessionStorage for future refreshes
+        if (targetCourseId || targetModuleId) {
+          try {
+            const ctxPayload = JSON.stringify({
+              courseId: targetCourseId,
+              moduleId: targetModuleId,
+              streamId: targetStreamId,
+              courseName: passedCourseName,
+              moduleName: passedModuleName,
+              streamName: passedStreamName,
+            });
+            if (targetCourseId) sessionStorage.setItem(`ignito_edit_topic_ctx_${targetCourseId}`, ctxPayload);
+            if (targetModuleId) sessionStorage.setItem(`ignito_edit_topic_ctx_${targetModuleId}`, ctxPayload);
+            sessionStorage.setItem("ignito_edit_topic_ctx_last", ctxPayload);
+          } catch {}
+        }
       } catch (err) {
         console.error("Error initializing edit topic page:", err);
         if (isMounted) setErrorMessage("Failed to load topic details.");
@@ -344,7 +387,7 @@ export default function EditMicrocredentialCourseTopic() {
   };
 
   // Load topics & student download documents for course
-  const loadTopicDetailsAndDocs = async (id) => {
+  const loadTopicDetailsAndDocs = async (id, modId = null) => {
     if (!id || id <= 0) return;
     try {
       // Topics detail API
@@ -420,7 +463,8 @@ export default function EditMicrocredentialCourseTopic() {
 
       // Also fetch student documents endpoint
       try {
-        const studentDocsRes = await getMicrocredentialStudentDownloadDocuments(id);
+        const targetModId = modId !== null ? Number(modId) : Number(selectedModuleId || initialModuleId || 0);
+        const studentDocsRes = await getMicrocredentialStudentDownloadDocuments(id, targetModId);
         const list =
           studentDocsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
           studentDocsRes?.microcredentialStudentDownloadDocumentList ||
@@ -507,7 +551,7 @@ export default function EditMicrocredentialCourseTopic() {
     }
 
     try {
-      await loadTopicDetailsAndDocs(Number(newCourseId));
+      await loadTopicDetailsAndDocs(Number(newCourseId), 0);
     } catch (err) {
       console.error("Error loading topic details for selected course:", err);
     }
@@ -522,6 +566,41 @@ export default function EditMicrocredentialCourseTopic() {
     setLoadingInitial(true);
     try {
       await loadTopicsForModule(Number(newModId));
+      const targetCId = Number(selectedCourseId || courseId || 0);
+      if (targetCId > 0) {
+        const studentDocsRes = await getMicrocredentialStudentDownloadDocuments(
+          targetCId,
+          Number(newModId)
+        );
+        const list =
+          studentDocsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
+          studentDocsRes?.microcredentialStudentDownloadDocumentList ||
+          studentDocsRes?.rawData?.adminGetMicrocredentialStudentDownloadDocumentsData ||
+          studentDocsRes?.rawData?.AdminGetMicrocredentialStudentDownloadDocumentsData ||
+          [];
+        if (Array.isArray(list)) {
+          setStudentDocs(
+            list.map((d, index) => {
+              const docIdNum = Number(d.microcredentialStudentDownloadDocumentId ?? d.MicrocredentialStudentDownloadDocumentId ?? 0);
+              return {
+                id: docIdNum > 0 ? docIdNum : `doc_${Date.now()}_${index}`,
+                documentId: docIdNum,
+                microcredentialStudentDownloadDocumentId: docIdNum,
+                originalFileName:
+                  d.originalFileName || d.OriginalFileName || "Student Document",
+                givenFileName: d.givenFileName || d.GivenFileName || d.originalFileName || d.OriginalFileName || "Student Document",
+                filePath:
+                  d.microcredentialStudentDownloadDocument ||
+                  d.MicrocredentialStudentDownloadDocument ||
+                  d.filePath ||
+                  "",
+                file: null,
+                isExisting: true,
+              };
+            })
+          );
+        }
+      }
     } catch (err) {
       console.error("Error loading module topics on module change:", err);
     } finally {

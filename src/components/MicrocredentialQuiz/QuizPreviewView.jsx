@@ -47,6 +47,15 @@ export default function QuizPreviewView({ quiz, onExit }) {
     loadPreview();
   }, [quiz]);
 
+  useEffect(() => {
+    if (quiz?.autoPrint && !loading && questions.length > 0) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [quiz?.autoPrint, loading, questions.length]);
+
   const handleSelectOption = (qId, optionIdx) => {
     if (previewMode === "student") {
       setSelectedAnswers((prev) => ({
@@ -74,9 +83,9 @@ export default function QuizPreviewView({ quiz, onExit }) {
   };
 
   return (
-    <div className="w-full bg-gray-50 dark:bg-gray-900 min-h-screen pb-16">
-      {/* Top Sticky Header */}
-      <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white/95 px-6 py-4 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 shadow-xs">
+    <div className="w-full bg-gray-50 dark:bg-gray-900 min-h-screen pb-16 print:bg-white print:min-h-0 print:pb-0">
+      {/* Top Sticky Header - Hidden on Print */}
+      <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 bg-white/95 px-6 py-4 backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 shadow-xs print:hidden">
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -100,6 +109,16 @@ export default function QuizPreviewView({ quiz, onExit }) {
 
         {/* Right Preview Controls */}
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition cursor-pointer"
+            title="Print Quiz"
+          >
+            <span className="text-sm">🖨️</span>
+            <span>Print</span>
+          </button>
+
           <div className="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800">
             <button
               type="button"
@@ -132,10 +151,26 @@ export default function QuizPreviewView({ quiz, onExit }) {
       </div>
 
       {/* Main Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Navigation Palette */}
-          <div className="lg:col-span-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 print:max-w-full print:m-0 print:p-0">
+        {/* Printable Quiz Title Header (Only shown when printing) */}
+        <div className="hidden print:block mb-6 border-b border-gray-300 pb-3">
+          <h1 className="text-2xl font-bold text-black">{quizTitle}</h1>
+          {(quiz?.moduleName || quiz?.microcredentialName || quiz?.streamName) && (
+            <p className="text-xs text-gray-600 mt-1">
+              {quiz?.moduleName ? `${quiz.moduleName} • ` : ""}
+              {quiz?.microcredentialName || quiz?.streamName || "Microcredential Assessment Quiz"}
+            </p>
+          )}
+          <div className="flex gap-4 mt-2 text-xs text-gray-600">
+            <span>Total Questions: {questions.length}</span>
+            <span>•</span>
+            <span>Total Points: {totalPoints} {totalPoints === 1 ? "point" : "points"}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 print:block">
+          {/* Left Navigation Palette - Hidden on Print */}
+          <div className="lg:col-span-3 print:hidden">
             <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-800/60">
               <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-3">
                 Questions Palette ({questions.length})
@@ -180,7 +215,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
           </div>
 
           {/* Right Question Body */}
-          <div className="lg:col-span-9 space-y-6">
+          <div className="lg:col-span-9 space-y-6 print:w-full print:space-y-4">
             {loading ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-xs dark:border-gray-800 dark:bg-gray-800">
                 <div className="inline-block size-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent mb-3" />
@@ -199,26 +234,26 @@ export default function QuizPreviewView({ quiz, onExit }) {
                   <div
                     key={q.questionsId || idx}
                     id={`preview-q-${idx}`}
-                    className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xs transition dark:border-gray-800 dark:bg-gray-800"
+                    className="rounded-2xl border border-gray-200 bg-white p-6 shadow-xs transition dark:border-gray-800 dark:bg-gray-800 print:border-gray-300 print:shadow-none print:break-inside-avoid print:bg-white print:p-4 print:mb-4"
                   >
                     {/* Header */}
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 dark:border-gray-700/60">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 dark:border-gray-700/60 print:border-gray-200 print:pb-2 print:mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white print:text-black">
                           Question {idx + 1}
                         </span>
-                        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:border-brand-800/60">
+                        <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700 border border-brand-200 dark:bg-brand-950/40 dark:text-brand-300 dark:border-brand-800/60 print:bg-gray-100 print:border-gray-300 print:text-gray-800">
                           {QUESTION_TYPE_NAMES[qType] || `Type ${qType}`}
                         </span>
                       </div>
-                      <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
+                      <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 print:text-gray-700">
                         ({q.points || 1} {q.points === 1 ? "point" : "points"})
                       </span>
                     </div>
 
                     {/* Question Text (rendered safely) */}
                     <div
-                      className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100 mb-5 leading-relaxed prose dark:prose-invert max-w-none"
+                      className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100 mb-5 leading-relaxed prose dark:prose-invert max-w-none print:text-black print:mb-3"
                       dangerouslySetInnerHTML={{ __html: q.questionText || q.question }}
                     />
 
@@ -249,27 +284,27 @@ export default function QuizPreviewView({ quiz, onExit }) {
                             <div
                               key={opt.answerId || optIdx}
                               onClick={() => handleSelectOption(q.questionsId, optIdx)}
-                              className={`flex items-center justify-between rounded-xl border p-3.5 cursor-pointer transition ${rowStyle}`}
+                              className={`flex items-center justify-between rounded-xl border p-3.5 cursor-pointer transition ${rowStyle} print:border-gray-300 print:p-2.5 print:mb-2 print:bg-white print:shadow-none`}
                             >
                               <div className="flex items-center gap-3">
                                 <span
                                   className={`flex size-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold ${
                                     previewMode === "answerKey" && isCorrectOption
-                                      ? "border-emerald-500 bg-emerald-500 text-white"
+                                      ? "border-emerald-500 bg-emerald-500 text-white print:border-emerald-700 print:bg-emerald-600"
                                       : previewMode === "student" && isSelectedByStudent
-                                      ? "border-brand-500 bg-brand-500 text-white"
-                                      : "border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400"
+                                      ? "border-brand-500 bg-brand-500 text-white print:border-gray-700 print:bg-gray-600"
+                                      : "border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400 print:border-gray-400 print:text-black"
                                   }`}
                                 >
                                   {optIdx + 1}
                                 </span>
-                                <span className={`text-sm ${textStyle}`}>
+                                <span className={`text-sm ${textStyle} print:text-black`}>
                                   {optText}
                                 </span>
                               </div>
 
                               {previewMode === "answerKey" && isCorrectOption && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 print:border print:border-emerald-600 print:bg-emerald-50 print:text-emerald-800">
                                   <CheckCircleIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                                   Correct Answer
                                 </span>
@@ -282,13 +317,13 @@ export default function QuizPreviewView({ quiz, onExit }) {
 
                     {/* TYPE 3: Fill in the Blank view */}
                     {qType === 3 && q.blankAnswers && q.blankAnswers.length > 0 && (
-                      <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/50 space-y-2">
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                      <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-700 dark:bg-gray-800/50 space-y-2 print:border-gray-300 print:bg-white print:p-3">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 print:text-black">
                           Blank Answer Key:
                         </span>
                         {q.blankAnswers.map((b, bIdx) => (
                           <div key={bIdx} className="flex items-center gap-2 text-xs">
-                            <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                            <span className="font-semibold text-emerald-700 dark:text-emerald-400 print:text-emerald-800">
                               Expected Answer: {b.correctAnswer || b.CorrectAnswer}
                             </span>
                           </div>
@@ -298,7 +333,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
 
                     {/* Hint Box (if any) */}
                     {q.hint && (
-                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300 print:border-gray-300 print:bg-gray-50 print:text-gray-800">
                         <span className="font-bold">Hint: </span>
                         {q.hint}
                       </div>
@@ -306,7 +341,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
 
                     {/* Explanation / Feedback Box when in Answer Key Mode */}
                     {previewMode === "answerKey" && (q.questionFeedback || q.explanation) && (
-                      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
+                      <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300 print:border-gray-300 print:bg-gray-50 print:text-gray-800">
                         <span className="font-bold">Explanation: </span>
                         {q.questionFeedback || q.explanation}
                       </div>
@@ -321,7 +356,7 @@ export default function QuizPreviewView({ quiz, onExit }) {
 
       {/* Quiz Information Modal */}
       {showInfoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-xs print:hidden">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-800">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700">
               <h3 className="text-base font-bold text-gray-900 dark:text-white">

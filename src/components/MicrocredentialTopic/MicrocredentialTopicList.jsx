@@ -30,10 +30,12 @@ import {
 } from "../../services/adminMicrocredentialService";
 import { getMicroCourseTopicDetail } from "../../services/microcredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { useToast } from "../../context/ToastContext";
 
 export default function MicrocredentialTopicList() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
 
   // Data & loading states
   const [coursesWithTopics, setCoursesWithTopics] = useState([]);
@@ -43,6 +45,16 @@ export default function MicrocredentialTopicList() {
     location.state?.successMessage || ""
   );
   const [downloadingUrl, setDownloadingUrl] = useState("");
+
+  // Trigger toast on navigation state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      showToast(location.state.successMessage, "success");
+    }
+    if (location.state?.errorMessage) {
+      showToast(location.state.errorMessage, "error");
+    }
+  }, [location.state, showToast]);
 
   const handleDownload = async (url, defaultName = "document.pdf") => {
     if (!url) return;
@@ -151,21 +163,24 @@ export default function MicrocredentialTopicList() {
           list.length
         );
       } else {
-        setErrorMessage(
+        const msg =
           response?.message ||
           response?.errorDescription ||
-          "Failed to load microcredential topic list."
-        );
+          "Failed to load microcredential topic list.";
+        setErrorMessage(msg);
+        showToast(msg, "error");
         setCoursesWithTopics([]);
       }
     } catch (err) {
       console.error("Error fetching micro course topic list:", err);
-      setErrorMessage(err.message || "Failed to load micro course topic list.");
+      const msg = err.message || "Failed to load micro course topic list.";
+      setErrorMessage(msg);
+      showToast(msg, "error");
       setCoursesWithTopics([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, searchQuery]);
+  }, [currentPage, pageSize, searchQuery, showToast]);
 
   useEffect(() => {
     fetchTopicList();
@@ -356,10 +371,13 @@ export default function MicrocredentialTopicList() {
     const id = Number(
       course.microcredentialCourseId || course.MicrocredentialCourseId || 0
     );
+    const moduleId = Number(
+      course.microcredentialModuleMasterId || course.MicrocredentialModuleMasterId || course.moduleId || 0
+    );
 
     if (id > 0) {
       try {
-        const res = await getMicrocredentialStudentDownloadDocuments(id);
+        const res = await getMicrocredentialStudentDownloadDocuments(id, moduleId);
         if (res && res.success) {
           const list =
             res.adminGetMicrocredentialStudentDownloadDocumentsData ||
@@ -399,7 +417,9 @@ export default function MicrocredentialTopicList() {
     try {
       const res = await microCourseTopicDelete(courseId, 1);
       if (res && res.success !== false) {
-        setSuccessMessage(res.message || "Micro course topics deleted successfully.");
+        const msg = res.message || "Micro course topics deleted successfully.";
+        setSuccessMessage(msg);
+        showToast(msg, "success");
         setCoursesWithTopics((prev) =>
           prev.filter(
             (c) =>
@@ -407,13 +427,16 @@ export default function MicrocredentialTopicList() {
           )
         );
       } else {
-        setErrorMessage(
-          res?.message || res?.errorDescription || "Failed to delete topics for course."
-        );
+        const msg =
+          res?.message || res?.errorDescription || "Failed to delete topics for course.";
+        setErrorMessage(msg);
+        showToast(msg, "error");
       }
     } catch (err) {
       console.error("Error deleting topics:", err);
-      setErrorMessage(err.message || "Failed to delete micro course topics.");
+      const msg = err.message || "Failed to delete micro course topics.";
+      setErrorMessage(msg);
+      showToast(msg, "error");
     } finally {
       setDeleting(false);
       setDeleteModalItem(null);

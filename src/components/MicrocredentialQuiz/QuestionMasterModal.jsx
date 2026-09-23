@@ -225,9 +225,12 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
     const qType = Number(q.degreeQuestionType || q.questionTypeId || 1);
     setQuestionType(qType);
 
+    const rawQuestionText = q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
+    const cleanQuestionText = rawQuestionText.replace(/<[^>]*>?/gm, '').trim() || rawQuestionText;
+
     setCommonForm({
       title: q.title || "",
-      questionText: q.questionText || q.question || "",
+      questionText: cleanQuestionText,
       questionFeedback: q.questionFeedback || "",
       hint: q.hint || "",
       shortDescription: q.shortDescription || "",
@@ -656,8 +659,17 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
                 <div className="space-y-3">
                   {questions.map((q, index) => {
                     const qId = q.questionId || q.questionsId || (index + 1);
-                    const qTypeObj = QUESTION_TYPES.find(t => t.id === Number(q.degreeQuestionType || 1));
-                    const cleanText = (q.questionText || q.question || "").replace(/<[^>]*>?/gm, '');
+                    const qTypeObj = QUESTION_TYPES.find(t => t.id === Number(q.degreeQuestionType || q.questionTypeId || 1));
+                    const cleanText = (
+                      q.cleanQuestionText ||
+                      q.finalQuestionName ||
+                      q.FinalQuestionName ||
+                      q.questionText ||
+                      q.question ||
+                      q.questionName ||
+                      ""
+                    ).replace(/<[^>]*>?/gm, '').trim();
+                    const typeLabel = q.questionTypeName || q.QuestionTypeName || qTypeObj?.name || `Type ${q.degreeQuestionType || 1}`;
 
                     return (
                       <div
@@ -672,7 +684,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <span className="rounded-md bg-gray-200/80 dark:bg-gray-700 px-2 py-0.5 text-[10px] font-semibold text-gray-700 dark:text-gray-300">
-                                {qTypeObj?.name || `Type ${q.degreeQuestionType || 1}`}
+                                {typeLabel}
                               </span>
                               <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                                 {q.points || 1} Pts
@@ -733,18 +745,18 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
           ) : (
             /* QUESTION FORM / EDITOR VIEW */
             <form onSubmit={handleSaveQuestion} className="space-y-6">
-              {/* Type Selection Pills */}
+              {/* Type Selection Pills (4 Types) */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   Select Question Type (1 of 4 Types)
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                   {QUESTION_TYPES.map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => setQuestionType(t.id)}
-                      className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition ${
+                      className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
                         questionType === t.id
                           ? "border-brand-500 bg-brand-50/80 text-brand-900 dark:bg-brand-950/50 dark:text-brand-200 shadow-xs"
                           : "border-transparent bg-white dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -1038,442 +1050,6 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
                         <option value={3}>Regular Expression</option>
                       </select>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 5: Matching */}
-              {questionType === 5 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                      Column A (Prompts) & Column B (Choices)
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newKey = matchChoices.length + 1;
-                        setMatchChoices(prev => [...prev, { tempChoiceKey: newKey, choiceText: `Choice ${newKey}`, displayOrder: newKey }]);
-                        setMatchPairs(prev => [...prev, { prompt: `Prompt ${newKey}`, correctChoice: newKey, displayOrder: newKey }]);
-                      }}
-                      className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300"
-                    >
-                      + Add Pair
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {matchPairs.map((pair, idx) => (
-                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <div className="sm:col-span-5">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Prompt (Column A #{idx + 1})</label>
-                          <input
-                            type="text"
-                            value={pair.prompt}
-                            onChange={(e) => setMatchPairs(prev => prev.map((p, i) => i === idx ? { ...p, prompt: e.target.value } : p))}
-                            className="w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="sm:col-span-5">
-                          <label className="block text-[10px] text-gray-500 mb-0.5">Matching Choice (Column B #{idx + 1})</label>
-                          <input
-                            type="text"
-                            value={matchChoices[idx]?.choiceText || ""}
-                            onChange={(e) => setMatchChoices(prev => prev.map((c, i) => i === idx ? { ...c, choiceText: e.target.value } : c))}
-                            className="w-full rounded-lg border border-gray-300 bg-transparent px-2.5 py-1 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                          />
-                        </div>
-
-                        <div className="sm:col-span-2 text-right">
-                          {matchPairs.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMatchPairs(prev => prev.filter((_, i) => i !== idx));
-                                setMatchChoices(prev => prev.filter((_, i) => i !== idx));
-                              }}
-                              className="p-1 text-red-500 hover:text-red-700"
-                            >
-                              <TrashBinIcon className="size-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 6: Ordering */}
-              {questionType === 6 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                      Sequential Items (In Correct Order)
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setOrderItems(prev => [...prev, { itemValue: `Step ${prev.length + 1}`, correctOrder: prev.length + 1, feedback: `Phase ${prev.length + 1}`, displayOrder: prev.length + 1 }])}
-                      className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300"
-                    >
-                      + Add Item
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {orderItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <span className="flex size-6 items-center justify-center rounded-lg bg-brand-50 text-[11px] font-bold text-brand-600 dark:bg-brand-950/50">
-                          {idx + 1}
-                        </span>
-                        <input
-                          type="text"
-                          value={item.itemValue}
-                          onChange={(e) => setOrderItems(prev => prev.map((it, i) => i === idx ? { ...it, itemValue: e.target.value } : it))}
-                          placeholder={`Item #${idx + 1}`}
-                          className="flex-1 rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                        />
-                        {orderItems.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => setOrderItems(prev => prev.filter((_, i) => i !== idx))}
-                            className="p-1 text-red-500 hover:text-red-700"
-                          >
-                            <TrashBinIcon className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 7: Written Response */}
-              {questionType === 7 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-4">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                    Written Response / Essay Settings
-                  </h3>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={writtenSettings.enableHtmlEditor}
-                        onChange={(e) => setWrittenSettings(prev => ({ ...prev, enableHtmlEditor: e.target.checked }))}
-                        className="rounded border-gray-300 text-brand-500"
-                      />
-                      <span>HTML Rich Editor</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={writtenSettings.addFile}
-                        onChange={(e) => setWrittenSettings(prev => ({ ...prev, addFile: e.target.checked, allowLearnerAttachments: e.target.checked }))}
-                        className="rounded border-gray-300 text-brand-500"
-                      />
-                      <span>Allow File Upload</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={writtenSettings.recordAudio}
-                        onChange={(e) => setWrittenSettings(prev => ({ ...prev, recordAudio: e.target.checked }))}
-                        className="rounded border-gray-300 text-brand-500"
-                      />
-                      <span>Record Audio</span>
-                    </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={writtenSettings.recordVideo}
-                        onChange={(e) => setWrittenSettings(prev => ({ ...prev, recordVideo: e.target.checked }))}
-                        className="rounded border-gray-300 text-brand-500"
-                      />
-                      <span>Record Video</span>
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      Evaluator Answer Key / Rubric (For Instructor Review)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={writtenSettings.evaluatorAnswerkey}
-                      onChange={(e) => setWrittenSettings(prev => ({ ...prev, evaluatorAnswerkey: e.target.value }))}
-                      placeholder="List expected grading points, key concepts, or rubrics..."
-                      className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white resize-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 8: Short Answer */}
-              {questionType === 8 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-3">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                    Direct Short Answer Entry
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        Expected Answer Text
-                      </label>
-                      <input
-                        type="text"
-                        value={shortAnswerText}
-                        onChange={(e) => setShortAnswerText(e.target.value)}
-                        placeholder="e.g. Hypertext Transfer Protocol"
-                        className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
-                        Matching Evaluation Rule
-                      </label>
-                      <select
-                        value={shortAnswerMethod}
-                        onChange={(e) => setShortAnswerMethod(e.target.value)}
-                        className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="ExactMatch">Exact Match</option>
-                        <option value="CaseInsensitive">Case Insensitive Match</option>
-                        <option value="Contains">Contains Key Phrase</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 9: Arithmetic */}
-              {questionType === 9 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-4">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                    Formula & Variable Ranges
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Formula</label>
-                      <input
-                        type="text"
-                        value={arithmeticForm.formula}
-                        onChange={(e) => setArithmeticForm(prev => ({ ...prev, formula: e.target.value }))}
-                        placeholder="e.g. x * y"
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Tolerance (+/-)</label>
-                      <input
-                        type="number"
-                        step="0.001"
-                        value={arithmeticForm.tolerance}
-                        onChange={(e) => setArithmeticForm(prev => ({ ...prev, tolerance: Number(e.target.value) }))}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Unit Text</label>
-                      <input
-                        type="text"
-                        value={arithmeticForm.unitText}
-                        onChange={(e) => setArithmeticForm(prev => ({ ...prev, unitText: e.target.value }))}
-                        placeholder="e.g. sq cm"
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Variables Configuration:</span>
-                    {arithmeticForm.variables.map((v, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs">
-                        <span className="font-bold text-brand-600">{v.variableName}:</span>
-                        <span>Min:</span>
-                        <input
-                          type="number"
-                          value={v.minValue}
-                          onChange={(e) => setArithmeticForm(prev => ({ ...prev, variables: prev.variables.map((va, i) => i === idx ? { ...va, minValue: Number(e.target.value) } : va) }))}
-                          className="w-16 rounded border px-2 py-0.5 text-xs dark:bg-gray-900"
-                        />
-                        <span>Max:</span>
-                        <input
-                          type="number"
-                          value={v.maxValue}
-                          onChange={(e) => setArithmeticForm(prev => ({ ...prev, variables: prev.variables.map((va, i) => i === idx ? { ...va, maxValue: Number(e.target.value) } : va) }))}
-                          className="w-16 rounded border px-2 py-0.5 text-xs dark:bg-gray-900"
-                        />
-                        <span>Step:</span>
-                        <input
-                          type="number"
-                          value={v.stepValue}
-                          onChange={(e) => setArithmeticForm(prev => ({ ...prev, variables: prev.variables.map((va, i) => i === idx ? { ...va, stepValue: Number(e.target.value) } : va) }))}
-                          className="w-16 rounded border px-2 py-0.5 text-xs dark:bg-gray-900"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 10: Significant Figures */}
-              {questionType === 10 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-3">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                    Significant Figures Configuration
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Formula</label>
-                      <input
-                        type="text"
-                        value={sigFigsForm.formula}
-                        onChange={(e) => setSigFigsForm(prev => ({ ...prev, formula: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Significant Figures Count</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="10"
-                        value={sigFigsForm.significantFiguresCount}
-                        onChange={(e) => setSigFigsForm(prev => ({ ...prev, significantFiguresCount: Number(e.target.value) }))}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Unit Text</label>
-                      <input
-                        type="text"
-                        value={sigFigsForm.unitText}
-                        onChange={(e) => setSigFigsForm(prev => ({ ...prev, unitText: e.target.value }))}
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 11: Multi Short Answer */}
-              {questionType === 11 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                      Multiple Short Answers with Percentage Weights
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setMultiShortAnswers(prev => [...prev, { answerText: `Answer ${prev.length + 1}`, weightInPercentage: Math.round(100 / (prev.length + 1)), displayOrder: prev.length + 1 }])}
-                      className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300"
-                    >
-                      + Add Input Box
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {multiShortAnswers.map((ans, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <span className="text-xs font-bold text-gray-600">Box #{idx + 1}:</span>
-                        <input
-                          type="text"
-                          value={ans.answerText}
-                          onChange={(e) => setMultiShortAnswers(prev => prev.map((a, i) => i === idx ? { ...a, answerText: e.target.value } : a))}
-                          placeholder="Expected word/answer"
-                          className="flex-1 rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                        />
-                        <span className="text-[11px] text-gray-500">Weight %:</span>
-                        <input
-                          type="number"
-                          value={ans.weightInPercentage}
-                          onChange={(e) => setMultiShortAnswers(prev => prev.map((a, i) => i === idx ? { ...a, weightInPercentage: Number(e.target.value) } : a))}
-                          className="w-20 rounded-lg border border-gray-300 bg-transparent px-2 py-1.5 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                        />
-                        {multiShortAnswers.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setMultiShortAnswers(prev => prev.filter((_, i) => i !== idx))}
-                            className="p-1 text-red-500 hover:text-red-700"
-                          >
-                            <TrashBinIcon className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TYPE 12: Likert Scale */}
-              {questionType === 12 && (
-                <div className="rounded-2xl border border-gray-200 p-4 dark:border-gray-800 bg-gray-50/40 dark:bg-gray-800/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white">
-                      Likert Scale Survey Statements
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setLikertStatements(prev => [...prev, { optionText: `Statement ${prev.length + 1}`, displayOrder: prev.length + 1 }])}
-                      className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300"
-                    >
-                      + Add Statement
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs">
-                    <label className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">Scale Points:</span>
-                      <select
-                        value={likertScaleTypeId}
-                        onChange={(e) => setLikertScaleTypeId(Number(e.target.value))}
-                        className="rounded-lg border px-2 py-1 text-xs dark:bg-gray-800"
-                      >
-                        <option value={3}>3-point scale</option>
-                        <option value={5}>5-point scale (Strongly Disagree to Strongly Agree)</option>
-                        <option value={7}>7-point scale</option>
-                      </select>
-                    </label>
-
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={likertIncludeNA}
-                        onChange={(e) => setLikertIncludeNA(e.target.checked)}
-                        className="rounded border-gray-300 text-brand-500"
-                      />
-                      <span>Include N/A option</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-2">
-                    {likertStatements.map((st, idx) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white dark:bg-gray-800 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <span className="text-xs font-bold text-gray-600">Statement {idx + 1}:</span>
-                        <input
-                          type="text"
-                          value={st.optionText}
-                          onChange={(e) => setLikertStatements(prev => prev.map((s, i) => i === idx ? { ...s, optionText: e.target.value } : s))}
-                          placeholder="e.g. The course material was comprehensive and helpful."
-                          className="flex-1 rounded-lg border border-gray-300 bg-transparent px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none dark:border-gray-700 dark:text-white"
-                        />
-                        {likertStatements.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setLikertStatements(prev => prev.filter((_, i) => i !== idx))}
-                            className="p-1 text-red-500 hover:text-red-700"
-                          >
-                            <TrashBinIcon className="size-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}

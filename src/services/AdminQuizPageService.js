@@ -425,10 +425,11 @@ export const degreeQuizMasterAddUpdate = saveDegreeQuizMaster;
 export async function getDegreeQuizDetailsByQuizId(quizIdOrParams) {
     try {
         const inputDto = buildGetDegreeQuizDetailsByQuizIdInput(quizIdOrParams);
-        const response = await apiClient('api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId', {
+        const endpoint = inputDto.endpoint || `api/DegreeQuizAPI/GetDegreeQuizDetailsByQuizId?QuizId=${encodeURIComponent(inputDto.quizId || 0)}`;
+        const response = await apiClient(endpoint, {
             method: 'POST',
             headers: inputDto.headers,
-            body: inputDto.body
+            body: inputDto.body ?? ''
         });
 
         if (!response.ok && response.status !== 200) {
@@ -875,16 +876,13 @@ export async function deleteMicrocredentialCheckpointQuizByCourseId(courseIdOrPa
  * 3.6 Fetch Student Downloadable Documents
  * Endpoint: POST /api/IgnitoMicroCredencialAPI/GetMicrocredentialStudentDownloadDocuments
  *
- * @param {number|object} courseIdOrParams - Microcredential Course ID
+ * @param {number|object} courseIdOrParams - Microcredential Course ID or parameter object
+ * @param {number} [microcredentialModuleMasterId=0] - Microcredential Module Master ID
  * @returns {Promise<object>} Documents list
  */
-export async function getMicrocredentialStudentDownloadDocuments(courseIdOrParams) {
+export async function getMicrocredentialStudentDownloadDocuments(courseIdOrParams, microcredentialModuleMasterId = 0) {
     try {
-        const courseId = typeof courseIdOrParams === 'object' && courseIdOrParams !== null
-            ? (courseIdOrParams.microcredentialCourseId ?? courseIdOrParams.MicrocredentialCourseId ?? 0)
-            : courseIdOrParams;
-
-        const inputDto = buildGetMicrocredentialStudentDownloadDocumentsInput(courseId);
+        const inputDto = buildGetMicrocredentialStudentDownloadDocumentsInput(courseIdOrParams, microcredentialModuleMasterId);
         const response = await apiClient('api/IgnitoMicroCredencialAPI/GetMicrocredentialStudentDownloadDocuments', {
             method: 'POST',
             headers: inputDto.headers,

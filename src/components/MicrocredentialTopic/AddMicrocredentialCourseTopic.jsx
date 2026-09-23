@@ -179,7 +179,10 @@ export default function AddMicrocredentialCourseTopic() {
         }
 
         try {
-          const docsRes = await getMicrocredentialStudentDownloadDocuments(Number(initialCourseId));
+          const docsRes = await getMicrocredentialStudentDownloadDocuments(
+            Number(initialCourseId),
+            Number(initialModuleId || 0)
+          );
           const list =
             docsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
             docsRes?.microcredentialStudentDownloadDocumentList ||
@@ -278,7 +281,7 @@ export default function AddMicrocredentialCourseTopic() {
       },
     ]);
     try {
-      const docsRes = await getMicrocredentialStudentDownloadDocuments(Number(courseId));
+      const docsRes = await getMicrocredentialStudentDownloadDocuments(Number(courseId), 0);
       const list =
         docsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
         docsRes?.microcredentialStudentDownloadDocumentList ||
@@ -306,6 +309,48 @@ export default function AddMicrocredentialCourseTopic() {
       }
     } catch (dErr) {
       setStudentDocs([]);
+    }
+  };
+
+  // Module dropdown change: load documents for selected module & course
+  const handleModuleChange = async (e) => {
+    const modId = e.target.value;
+    setSelectedModuleId(modId);
+
+    if (selectedCourseId) {
+      try {
+        const docsRes = await getMicrocredentialStudentDownloadDocuments(
+          Number(selectedCourseId),
+          Number(modId || 0)
+        );
+        const list =
+          docsRes?.adminGetMicrocredentialStudentDownloadDocumentsData ||
+          docsRes?.microcredentialStudentDownloadDocumentList ||
+          docsRes?.rawData?.adminGetMicrocredentialStudentDownloadDocumentsData ||
+          docsRes?.rawData?.AdminGetMicrocredentialStudentDownloadDocumentsData ||
+          [];
+        if (Array.isArray(list) && list.length > 0) {
+          setStudentDocs(
+            list.map((d, index) => {
+              const docIdNum = Number(d.microcredentialStudentDownloadDocumentId ?? d.MicrocredentialStudentDownloadDocumentId ?? 0);
+              return {
+                id: docIdNum > 0 ? docIdNum : `doc_${Date.now()}_${index}`,
+                documentId: docIdNum,
+                microcredentialStudentDownloadDocumentId: docIdNum,
+                originalFileName: d.originalFileName || d.OriginalFileName || "Student Document",
+                givenFileName: d.givenFileName || d.GivenFileName || d.originalFileName || d.OriginalFileName || "Student Document",
+                filePath: d.microcredentialStudentDownloadDocument || d.MicrocredentialStudentDownloadDocument || d.filePath || "",
+                file: null,
+                isExisting: true,
+              };
+            })
+          );
+        } else {
+          setStudentDocs([]);
+        }
+      } catch (dErr) {
+        setStudentDocs([]);
+      }
     }
   };
 
@@ -960,7 +1005,7 @@ export default function AddMicrocredentialCourseTopic() {
                 id="moduleSelect"
                 name="moduleSelect"
                 value={selectedModuleId}
-                onChange={(e) => setSelectedModuleId(e.target.value)}
+                onChange={handleModuleChange}
                 disabled={isModuleLocked || loadingModules || saving}
                 className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-xs text-gray-800 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-800/80 disabled:text-gray-600 dark:disabled:text-gray-300 disabled:cursor-not-allowed"
               >

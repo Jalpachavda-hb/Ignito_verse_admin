@@ -15,6 +15,11 @@ export default function SignInForm() {
   const location = useLocation();
   const destination = (location.state as any)?.from?.pathname || "/";
 
+  // Check if redirected because of 2-hour session timeout
+  const searchParams = new URLSearchParams(location.search);
+  const isSessionExpired = searchParams.get("expired") === "true" || Boolean((location.state as any)?.sessionExpired);
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState<boolean>(isSessionExpired);
+
   // Form State
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +35,7 @@ export default function SignInForm() {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+    setSessionExpiredNotice(false);
 
     const trimmedUser = emailOrUsername.trim();
     if (!trimmedUser) {
@@ -89,6 +95,38 @@ export default function SignInForm() {
           Sign in to your Admin Panel
         </p>
       </div>
+
+      {/* Session Expired Alert */}
+      {sessionExpiredNotice && !errorMessage && (
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs animate-fadeIn"
+        >
+          <svg
+            className="size-4 shrink-0 text-amber-500 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <div className="flex-1 font-normal leading-relaxed">
+            Your admin session has expired after 2 hours. For security, please sign in again.
+          </div>
+          <button
+            type="button"
+            onClick={() => setSessionExpiredNotice(false)}
+            className="text-amber-400 hover:text-amber-600 ml-1 cursor-pointer"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Error Alert */}
       {errorMessage && (

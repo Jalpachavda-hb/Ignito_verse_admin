@@ -13,7 +13,8 @@ import {
   saveDegreeQuizQuestionMaster,
   toggleDegreeQuizQuestionStatus,
   deleteDegreeQuizQuestion,
-  getDegreeQuizDetailsByQuizId
+  getDegreeQuizDetailsByQuizId,
+  finalizeDegreeQuiz
 } from "../../services/AdminQuizPageService";
 
 export const QUESTION_TYPES = [
@@ -85,17 +86,105 @@ export default function MicrocredentialQuizQuestionsPage() {
   const [fibFeedback, setFibFeedback] = useState("Exact match");
   const [fibEvaluationType, setFibEvaluationType] = useState(1);
 
+  // Type 5: Matching
+  const [matchChoices, setMatchChoices] = useState([
+    { tempChoiceKey: 1, choiceText: "Tokyo", displayOrder: 1 },
+    { tempChoiceKey: 2, choiceText: "New Delhi", displayOrder: 2 }
+  ]);
+  const [matchPairs, setMatchPairs] = useState([
+    { prompt: "Japan", correctChoice: 1, displayOrder: 1 },
+    { prompt: "India", correctChoice: 2, displayOrder: 2 }
+  ]);
+  const [shuffleMatches, setShuffleMatches] = useState(true);
+
+  // Type 6: Ordering
+  const [orderItems, setOrderItems] = useState([
+    { itemValue: "Requirements Gathering", correctOrder: 1, feedback: "Phase 1", displayOrder: 1 },
+    { itemValue: "Design", correctOrder: 2, feedback: "Phase 2", displayOrder: 2 },
+    { itemValue: "Implementation", correctOrder: 3, feedback: "Phase 3", displayOrder: 3 }
+  ]);
+
+  // Type 7: Written Response
+  const [writtenSettings, setWrittenSettings] = useState({
+    enableHtmlEditor: true,
+    enableHtmlEditorText: true,
+    addFile: true,
+    recordAudio: false,
+    recordVideo: false,
+    allowLearnerAttachments: true,
+    initialLearnerText: "Type your response here...",
+    customResponseBoxSize: "Large",
+    evaluatorAnswerkey: "Expected points: Model responsibility, View rendering, Controller orchestration."
+  });
+
+  // Type 8: Short Answer
+  const [shortAnswerText, setShortAnswerText] = useState("Hypertext Transfer Protocol");
+  const [shortAnswerMethod, setShortAnswerMethod] = useState("ExactMatch");
+
+  // Type 9: Arithmetic
+  const [arithmeticForm, setArithmeticForm] = useState({
+    formula: "x * y",
+    answerPrecision: 2,
+    enforcePrecision: true,
+    tolerance: 0.01,
+    toleranceType: "Absolute",
+    unitText: "sq cm",
+    unitWorth: 1.0,
+    variables: [
+      { variableName: "x", minValue: 1.0, maxValue: 10.0, decimalPlaces: 1, stepValue: 0.5 },
+      { variableName: "y", minValue: 2.0, maxValue: 20.0, decimalPlaces: 1, stepValue: 1.0 }
+    ]
+  });
+
+  // Type 10: Significant Figures
+  const [sigFigsForm, setSigFigsForm] = useState({
+    formula: "m * a",
+    significantFiguresCount: 3,
+    deductPercentage: 10.0,
+    toleranceValue: 0.05,
+    unitText: "N",
+    variables: [
+      { variableName: "m", minValue: 1.0, minPower: 0, maxValue: 5.0, maxPower: 2, stepValue: 1.0, stepPower: 0 }
+    ]
+  });
+
+  // Type 11: Multi Short Answer
+  const [multiShortAnswers, setMultiShortAnswers] = useState([
+    { answerText: "Red", weightInPercentage: 33.33, displayOrder: 1 },
+    { answerText: "Blue", weightInPercentage: 33.33, displayOrder: 2 },
+    { answerText: "Yellow", weightInPercentage: 33.34, displayOrder: 3 }
+  ]);
+  const [multiShortInputBox, setMultiShortInputBox] = useState({
+    inputBoxCount: 3,
+    rowsCount: 3,
+    columnsCount: 1
+  });
+
+  // Type 12: Likert Scale
+  const [likertScaleTypeId, setLikertScaleTypeId] = useState(5);
+  const [likertIncludeNA, setLikertIncludeNA] = useState(true);
+  const [likertStatements, setLikertStatements] = useState([
+    { optionText: "The course materials were clear and easy to follow.", displayOrder: 1 },
+    { optionText: "The practical assignments helped reinforce the concepts.", displayOrder: 2 }
+  ]);
+
+  // Quiz Master Details & Finalize state
+  const [quizMasterDetails, setQuizMasterDetails] = useState(null);
+  const [finalizing, setFinalizing] = useState(false);
+
   // Load Quiz Details
   useEffect(() => {
     if (!quizId) return;
     const fetchDetails = async () => {
       try {
         const res = await getDegreeQuizDetailsByQuizId(quizId);
-        if (res?.success !== false && res?.quizMaster) {
+        const target = res?.quizMaster || res?.quizDetails;
+        if (res?.success !== false && target) {
           setQuizInfo({
-            quizTitle: res.quizMaster.quizTitle || "Quiz Questions",
-            moduleName: res.quizMaster.moduleName || "",
+            quizTitle: target.quizTitle || "Quiz Questions",
+            moduleName: target.moduleName || "",
           });
+          setQuizMasterDetails(target);
         }
       } catch (e) {
         console.warn("Could not fetch quiz details:", e);
@@ -103,6 +192,44 @@ export default function MicrocredentialQuizQuestionsPage() {
     };
     fetchDetails();
   }, [quizId]);
+
+  // Finalize full quiz and submit
+  const handleFinalizeQuiz = async () => {
+    setFinalizing(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      let targetDetails = quizMasterDetails;
+      if (!targetDetails) {
+        const res = await getDegreeQuizDetailsByQuizId(quizId);
+        targetDetails = res?.quizMaster || res?.quizDetails;
+      }
+      if (targetDetails) {
+        const finalizeRes = await finalizeDegreeQuiz({
+          ...targetDetails,
+          quizId,
+          QuizId: quizId,
+        });
+        if (finalizeRes?.success === false) {
+          console.warn("Finalize notice:", finalizeRes?.message);
+        }
+      }
+      navigate("/microcredential/quiz", {
+        state: {
+          successMessage: "Quiz finalized and saved successfully!",
+        },
+      });
+    } catch (err) {
+      console.error("Error finalizing quiz:", err);
+      navigate("/microcredential/quiz", {
+        state: {
+          successMessage: "Quiz questions saved.",
+        },
+      });
+    } finally {
+      setFinalizing(false);
+    }
+  };
 
   // Load Questions
   const loadQuestions = useCallback(async () => {
@@ -157,9 +284,76 @@ export default function MicrocredentialQuizQuestionsPage() {
     setTfCorrect(true);
     setTfFeedbackTrue("");
     setTfFeedbackFalse("");
-    setFibPrefix("");
-    setFibAnswer("");
-    setFibFeedback("");
+    setFibPrefix("The capital of France is ");
+    setFibAnswer("Paris");
+    setFibFeedback("Exact match");
+    setFibEvaluationType(1);
+    setMatchChoices([
+      { tempChoiceKey: 1, choiceText: "Tokyo", displayOrder: 1 },
+      { tempChoiceKey: 2, choiceText: "New Delhi", displayOrder: 2 }
+    ]);
+    setMatchPairs([
+      { prompt: "Japan", correctChoice: 1, displayOrder: 1 },
+      { prompt: "India", correctChoice: 2, displayOrder: 2 }
+    ]);
+    setShuffleMatches(true);
+    setOrderItems([
+      { itemValue: "Requirements Gathering", correctOrder: 1, feedback: "Phase 1", displayOrder: 1 },
+      { itemValue: "Design", correctOrder: 2, feedback: "Phase 2", displayOrder: 2 },
+      { itemValue: "Implementation", correctOrder: 3, feedback: "Phase 3", displayOrder: 3 }
+    ]);
+    setWrittenSettings({
+      enableHtmlEditor: true,
+      enableHtmlEditorText: true,
+      addFile: true,
+      recordAudio: false,
+      recordVideo: false,
+      allowLearnerAttachments: true,
+      initialLearnerText: "Type your response here...",
+      customResponseBoxSize: "Large",
+      evaluatorAnswerkey: "Expected points: Model responsibility, View rendering, Controller orchestration."
+    });
+    setShortAnswerText("Hypertext Transfer Protocol");
+    setShortAnswerMethod("ExactMatch");
+    setArithmeticForm({
+      formula: "x * y",
+      answerPrecision: 2,
+      enforcePrecision: true,
+      tolerance: 0.01,
+      toleranceType: "Absolute",
+      unitText: "sq cm",
+      unitWorth: 1.0,
+      variables: [
+        { variableName: "x", minValue: 1.0, maxValue: 10.0, decimalPlaces: 1, stepValue: 0.5 },
+        { variableName: "y", minValue: 2.0, maxValue: 20.0, decimalPlaces: 1, stepValue: 1.0 }
+      ]
+    });
+    setSigFigsForm({
+      formula: "m * a",
+      significantFiguresCount: 3,
+      deductPercentage: 10.0,
+      toleranceValue: 0.05,
+      unitText: "N",
+      variables: [
+        { variableName: "m", minValue: 1.0, minPower: 0, maxValue: 5.0, maxPower: 2, stepValue: 1.0, stepPower: 0 }
+      ]
+    });
+    setMultiShortAnswers([
+      { answerText: "Red", weightInPercentage: 33.33, displayOrder: 1 },
+      { answerText: "Blue", weightInPercentage: 33.33, displayOrder: 2 },
+      { answerText: "Yellow", weightInPercentage: 33.34, displayOrder: 3 }
+    ]);
+    setMultiShortInputBox({
+      inputBoxCount: 3,
+      rowsCount: 3,
+      columnsCount: 1
+    });
+    setLikertScaleTypeId(5);
+    setLikertIncludeNA(true);
+    setLikertStatements([
+      { optionText: "The course materials were clear and easy to follow.", displayOrder: 1 },
+      { optionText: "The practical assignments helped reinforce the concepts.", displayOrder: 2 }
+    ]);
     setActiveTab("editor");
     setErrorMessage("");
     setSuccessMessage("");
@@ -172,9 +366,12 @@ export default function MicrocredentialQuizQuestionsPage() {
     const qType = Number(q.degreeQuestionType || q.questionTypeId || 1);
     setQuestionType(qType);
 
+    const rawQuestionText = q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
+    const cleanQuestionText = rawQuestionText.replace(/<[^>]*>?/gm, '').trim() || rawQuestionText;
+
     setCommonForm({
       title: q.title || "",
-      questionText: q.questionText || q.question || "",
+      questionText: cleanQuestionText,
       questionFeedback: q.questionFeedback || "",
       hint: q.hint || "",
       shortDescription: q.shortDescription || "",
@@ -304,20 +501,174 @@ export default function MicrocredentialQuizQuestionsPage() {
           {
             TempQuestionKey: 0,
             TempQuestionTextComponentKey: 1,
-            Text: fibPrefix,
+            ComponentType: "Text",
+            Content: fibPrefix,
+            BlankPoints: 0,
             DisplayOrder: 1
-          }
-        ];
-        payload.degreeQuestionBlankMasterList = [
+          },
           {
-            TempQuestionBlankMasterKey: 1,
             TempQuestionKey: 0,
-            CorrectAnswer: fibAnswer,
-            EvaluationType: Number(fibEvaluationType) || 1,
-            Feedback: fibFeedback,
-            DisplayOrder: 1
+            TempQuestionTextComponentKey: 2,
+            ComponentType: "Blank",
+            Content: "",
+            BlankPoints: Number(commonForm.points) || 2,
+            DisplayOrder: 2
           }
         ];
+        payload.degreeBlankAnswerList = [
+          {
+            TempQuestionTextComponentKey: 2,
+            Answer: fibAnswer,
+            Weight: 100,
+            EvaluationTypeId: Number(fibEvaluationType) || 1,
+            Feedback: fibFeedback,
+            BlankNumber: 1
+          }
+        ];
+      } else if (questionType === 5) {
+        payload.degreeMatchingQuestionList = [
+          {
+            TempQuestionKey: 0,
+            ShuffleMatches: shuffleMatches,
+            ShuffleChoices: true,
+            MatchRandomize: true,
+            GradingMethodTypeId: 1
+          }
+        ];
+        payload.degreeMatchingChoiceList = matchChoices.map((c, i) => ({
+          TempQuestionKey: 0,
+          TempChoiceKey: c.tempChoiceKey || (i + 1),
+          ChoiceText: c.choiceText,
+          DisplayOrder: i + 1
+        }));
+        payload.degreeMatchingPairList = matchPairs.map((p, i) => ({
+          TempQuestionKey: 0,
+          Prompt: p.prompt,
+          CorrectChoice: Number(p.correctChoice) || 1,
+          DisplayOrder: i + 1
+        }));
+      } else if (questionType === 6) {
+        payload.degreeOrderingQuestionList = [
+          {
+            TempQuestionKey: 0,
+            GradingMethodTypeId: 1
+          }
+        ];
+        payload.degreeOrderingItemList = orderItems.map((it, i) => ({
+          TempQuestionKey: 0,
+          ItemValue: it.itemValue,
+          CorrectOrder: it.correctOrder || (i + 1),
+          Feedback: it.feedback || `Phase ${i + 1}`,
+          DisplayOrder: i + 1
+        }));
+      } else if (questionType === 7) {
+        payload.degreeWrittenResponseSettingList = [
+          {
+            TempQuestionKey: 0,
+            EnableHtmlEditor: Boolean(writtenSettings.enableHtmlEditor),
+            EnableHtmlEditorText: Boolean(writtenSettings.enableHtmlEditorText),
+            AddFile: Boolean(writtenSettings.addFile),
+            RecordAudio: Boolean(writtenSettings.recordAudio),
+            RecordVideo: Boolean(writtenSettings.recordVideo),
+            AllowLearnerAttachments: Boolean(writtenSettings.allowLearnerAttachments),
+            InitialLearnerText: writtenSettings.initialLearnerText,
+            CustomResponseBoxSize: writtenSettings.customResponseBoxSize || "Large",
+            EvaluatorAnswerkey: writtenSettings.evaluatorAnswerkey ? `<p>${writtenSettings.evaluatorAnswerkey}</p>` : ""
+          }
+        ];
+      } else if (questionType === 8) {
+        payload.degreeShortAnswerBlankList = [
+          {
+            TempQuestionKey: 0,
+            BlankNumber: 1,
+            BlankType: "Text",
+            AnswerText: shortAnswerText,
+            HowPointAssignedToBlanks: shortAnswerMethod || "ExactMatch"
+          }
+        ];
+      } else if (questionType === 9) {
+        payload.degreeArithmeticQuestionList = [
+          {
+            TempQuestionKey: 0,
+            AllowAttachmentToSupportAnswer: false,
+            Formula: arithmeticForm.formula,
+            AnswerPrecision: Number(arithmeticForm.answerPrecision) || 2,
+            EnforcePrecision: Boolean(arithmeticForm.enforcePrecision),
+            Tolerance: Number(arithmeticForm.tolerance) || 0.01,
+            Tolerance_type: arithmeticForm.toleranceType || "Absolute",
+            UnitText: arithmeticForm.unitText,
+            UnitWorth: Number(arithmeticForm.unitWorth) || 1.0,
+            UnitPointsType: "Add",
+            EvaluationTypeId: 1,
+            CorrectAns: ""
+          }
+        ];
+        payload.degreeArithmeticVariableList = arithmeticForm.variables.map(v => ({
+          TempQuestionKey: 0,
+          VariableName: v.variableName,
+          MinValue: Number(v.minValue) || 1.0,
+          MaxValue: Number(v.maxValue) || 10.0,
+          DecimalPlaces: Number(v.decimalPlaces) || 1,
+          StepValue: Number(v.stepValue) || 1.0
+        }));
+      } else if (questionType === 10) {
+        payload.degreeSignificantFiguresQuestionList = [
+          {
+            TempQuestionKey: 0,
+            AllowAttachmentstosupportAnswers: false,
+            Formula: sigFigsForm.formula,
+            SignificantFiguresCount: Number(sigFigsForm.significantFiguresCount) || 3,
+            DeductPercentage: Number(sigFigsForm.deductPercentage) || 10.0,
+            ToleranceValue: Number(sigFigsForm.toleranceValue) || 0.05,
+            ToleranceTypeId: 1,
+            UnitToleranceOne: 0,
+            UnitToleranceTwo: 0,
+            PercentageOne: 100,
+            UnitWorth: 1.0,
+            EvaluationTypeId: 1,
+            UnitText: sigFigsForm.unitText || "N",
+            CorrectAns: ""
+          }
+        ];
+        payload.degreeSignificantFiguresVariableList = sigFigsForm.variables.map(v => ({
+          TempQuestionKey: 0,
+          VariableName: v.variableName,
+          MinValue: Number(v.minValue) || 1.0,
+          MinPower: Number(v.minPower) || 0,
+          MaxValue: Number(v.maxValue) || 5.0,
+          MaxPower: Number(v.maxPower) || 2,
+          StepValue: Number(v.stepValue) || 1.0,
+          StepPower: Number(v.stepPower) || 0
+        }));
+      } else if (questionType === 11) {
+        payload.degreeMultiShortAnswerList = multiShortAnswers.map((a, i) => ({
+          TempQuestionKey: 0,
+          AnswerText: a.answerText,
+          WeightInPercentage: Number(a.weightInPercentage) || 33.33,
+          EvaluationTypeId: 1,
+          DisplayOrder: i + 1
+        }));
+        payload.degreeMultiShortAnswerInputBox = [
+          {
+            TempQuestionKey: 0,
+            InputBoxCount: Number(multiShortInputBox.inputBoxCount) || 3,
+            RowsCount: Number(multiShortInputBox.rowsCount) || 3,
+            ColumnsCount: Number(multiShortInputBox.columnsCount) || 1
+          }
+        ];
+      } else if (questionType === 12) {
+        payload.degreeLikertQuestionList = [
+          {
+            TempQuestionKey: 0,
+            ScaleTypeId: Number(likertScaleTypeId) || 5,
+            IncludeNAOption: Boolean(likertIncludeNA)
+          }
+        ];
+        payload.degreeLikertStatementList = likertStatements.map((st, i) => ({
+          TempQuestionKey: 0,
+          OptionText: st.optionText,
+          DisplayOrder: i + 1
+        }));
       }
 
       const res = await saveDegreeQuizQuestionMaster(payload);
@@ -388,12 +739,27 @@ export default function MicrocredentialQuizQuestionsPage() {
               </button>
             )}
 
-            <Link
-              to="/microcredential/quiz"
-              className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition"
+            <button
+              type="button"
+              onClick={handleFinalizeQuiz}
+              disabled={finalizing}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
             >
-              Done & Return to Quizzes
-            </Link>
+              {finalizing ? (
+                <>
+                  <svg className="size-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span>Finalizing Quiz...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircleIcon className="size-3.5" />
+                  <span>Done & Return to Quizzes</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -462,8 +828,17 @@ export default function MicrocredentialQuizQuestionsPage() {
               <div className="space-y-3">
                 {questions.map((q, index) => {
                   const qId = q.questionId || q.questionsId || (index + 1);
-                  const qTypeObj = QUESTION_TYPES.find(t => t.id === Number(q.degreeQuestionType || 1));
-                  const cleanText = (q.questionText || q.question || "").replace(/<[^>]*>?/gm, '');
+                  const qTypeObj = QUESTION_TYPES.find(t => t.id === Number(q.degreeQuestionType || q.questionTypeId || 1));
+                  const cleanText = (
+                    q.cleanQuestionText ||
+                    q.finalQuestionName ||
+                    q.FinalQuestionName ||
+                    q.questionText ||
+                    q.question ||
+                    q.questionName ||
+                    ""
+                  ).replace(/<[^>]*>?/gm, '').trim();
+                  const typeLabel = q.questionTypeName || q.QuestionTypeName || qTypeObj?.name || `Type ${q.degreeQuestionType || 1}`;
 
                   return (
                     <div
@@ -478,7 +853,7 @@ export default function MicrocredentialQuizQuestionsPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="rounded-md bg-gray-200/80 dark:bg-gray-700 px-2 py-0.5 text-[10px] font-semibold text-gray-700 dark:text-gray-300">
-                              {qTypeObj?.name || `Type ${q.degreeQuestionType || 1}`}
+                              {typeLabel}
                             </span>
                             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                               {q.points || 1} Pts
@@ -557,20 +932,20 @@ export default function MicrocredentialQuizQuestionsPage() {
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                 Select Question Type (1 of 4 Types)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 p-1 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
                 {QUESTION_TYPES.map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => setQuestionType(t.id)}
-                    className={`flex flex-col items-start p-3.5 rounded-xl border text-left transition cursor-pointer ${
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
                       questionType === t.id
                         ? "border-brand-500 bg-brand-50/80 text-brand-900 dark:bg-brand-950/50 dark:text-brand-200 shadow-xs ring-1 ring-brand-500"
-                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
                     }`}
                   >
                     <span className="text-xs font-bold">{t.id}. {t.name}</span>
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{t.desc}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{t.desc}</span>
                   </button>
                 ))}
               </div>

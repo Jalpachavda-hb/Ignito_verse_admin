@@ -45,9 +45,7 @@ import {
   MicrocredentialQuizList,
   AddEditMicrocredentialQuiz,
   MicrocredentialQuizQuestionsPage,
-  MicrocredentialCheckpointQuizList,
   MicrocredentialQuizResult,
-  MicrocredentialCheckpointQuizReport,
 } from "./components/MicrocredentialQuiz";
 import GoogleMeetList from "./components/GoogleMeet/GoogleMeetList";
 import CreateGoogleMeet from "./components/GoogleMeet/CreateGoogleMeet";
@@ -56,10 +54,11 @@ import GoogleCalendarList from "./components/GoogleCalendar/GoogleCalendarList";
 import CreateGoogleCalendarEvent from "./components/GoogleCalendar/CreateGoogleCalendarEvent";
 import ZoomMeetingList from "./components/ZoomMeeting/ZoomMeetingList";
 import CreateZoomMeeting from "./components/ZoomMeeting/CreateZoomMeeting";
+import { ToastProvider } from "./context/ToastContext";
 
 export default function App() {
   return (
-    <>
+    <ToastProvider>
       <Router>
         <ScrollToTop />
         <Routes>
@@ -237,7 +236,7 @@ export default function App() {
               path="/MicrocredentialQuizMVC/MicrocredentialQuizResult"
               element={<MicrocredentialQuizResult />}
             />
-            <Route
+            {/* <Route
               path="/microcredential/checkpoint-quiz"
               element={<MicrocredentialCheckpointQuizList />}
             />
@@ -252,7 +251,7 @@ export default function App() {
             <Route
               path="/MicrocredentialCourseDetail/MicrocredentialCheckpointQuizReport"
               element={<MicrocredentialCheckpointQuizReport />}
-            />
+            /> */}
             <Route
               path="/microcredential/purchased-students"
               element={<PlaceholderPage title="Purchased Students List" />}
@@ -365,6 +364,6 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
-    </>
+    </ToastProvider>
   );
 }

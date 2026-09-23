@@ -8,6 +8,7 @@ import {
   getStreamData,
   getMicrocredentialCourse,
 } from "../../services/adminMicrocredentialService";
+import { useToast } from "../../context/ToastContext";
 
 const EVENT_TYPES = [
   { value: "Live Workshop", label: "Live Workshop" },
@@ -21,6 +22,7 @@ const EVENT_TYPES = [
 
 export default function CreateGoogleCalendarEvent() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Dropdown states
   const [streamList, setStreamList] = useState([]);
@@ -31,7 +33,6 @@ export default function CreateGoogleCalendarEvent() {
 
   // Submitting & Feedback
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,14 +43,6 @@ export default function CreateGoogleCalendarEvent() {
     endDateTime: "",
     description: "",
   });
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage("");
-      navigate("/google-calendar-list");
-    }, 1200);
-  };
 
   // 1. Fetch Streams on mount
   useEffect(() => {
@@ -126,32 +119,32 @@ export default function CreateGoogleCalendarEvent() {
     e.preventDefault();
 
     if (!selectedStreamId) {
-      alert("Please select a Stream.");
+      showToast("Please select a Stream.", "error");
       return;
     }
 
     if (!formData.microcredentialCourseId) {
-      alert("Please select a Microcredential Course.");
+      showToast("Please select a Microcredential Course.", "error");
       return;
     }
 
     if (!formData.eventTitle.trim()) {
-      alert("Please enter an Event Title.");
+      showToast("Please enter an Event Title.", "error");
       return;
     }
 
     if (!formData.startDateTime) {
-      alert("Please specify the Start Date & Time.");
+      showToast("Please specify the Start Date & Time.", "error");
       return;
     }
 
     if (!formData.endDateTime) {
-      alert("Please specify the End Date & Time.");
+      showToast("Please specify the End Date & Time.", "error");
       return;
     }
 
     if (new Date(formData.endDateTime) <= new Date(formData.startDateTime)) {
-      alert("End Date & Time must be after Start Date & Time.");
+      showToast("End Date & Time must be after Start Date & Time.", "error");
       return;
     }
 
@@ -169,13 +162,16 @@ export default function CreateGoogleCalendarEvent() {
       const res = await createGoogleCalendarEvent(payload);
 
       if (res && res.isSuccess) {
-        showToast(res.message || "Google Calendar event created successfully!");
+        showToast(res.message || "Google Calendar event created successfully!", "success");
+        setTimeout(() => {
+          navigate("/google-calendar-list");
+        }, 1200);
       } else {
-        alert(res?.message || "Failed to create Google Calendar event. Please try again.");
+        showToast(res?.message || "Failed to create Google Calendar event. Please try again.", "error");
       }
     } catch (err) {
       console.error("Submit Error:", err);
-      alert(err?.message || "An unexpected error occurred.");
+      showToast(err?.message || "An unexpected error occurred.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -188,14 +184,6 @@ export default function CreateGoogleCalendarEvent() {
         description="Schedule a new Google Calendar event and sync it with enrolled students."
       />
       <PageBreadcrumb pageTitle="Create Google Calendar Event" />
-
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-2xl dark:bg-white dark:text-gray-900 animate-in fade-in slide-in-from-bottom-3">
-          <CheckCircleIcon className="size-5 text-emerald-400 dark:text-emerald-600" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
 
       {/* Main Form Container */}
       <div className="rounded-2xl border border-gray-200 bg-white shadow-xs dark:border-gray-800 dark:bg-gray-900 overflow-hidden">

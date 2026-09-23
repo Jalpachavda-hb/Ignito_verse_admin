@@ -57,33 +57,90 @@ export function parseMainDegreeQuizListOutput(rawJson = {}, status = 200) {
 
     const rawList = data?.quizDegreeList || data?.QuizDegreeList || data?.degreeQuizList || data?.DegreeQuizList || data?.quizList || data?.QuizList || (Array.isArray(data) ? data : []);
     const quizDegreeList = Array.isArray(rawList)
-        ? rawList.map(item => ({
-            ...item,
-            quizId: item?.quizId ?? item?.QuizId ?? item?.id ?? 0,
-            quizTitle: item?.quizTitle || item?.QuizTitle || item?.title || '',
-            quizDescription: item?.quizDescription || item?.QuizDescription || item?.description || item?.Description || '',
-            educationTypeId: item?.educationTypeId ?? item?.EducationTypeId ?? 2,
-            educationTypeName: item?.educationTypeName || item?.EducationTypeName || '',
-            streamId: item?.streamId ?? item?.StreamId ?? 0,
-            streamName: item?.streamName || item?.StreamName || item?.stream || '',
-            microcredentialCourseId: item?.microcredentialCourseId ?? item?.MicrocredentialCourseId ?? 0,
-            microcredentialCourseName: item?.microcredentialCourseName || item?.MicrocredentialCourseName || item?.microcredentialName || item?.MicrocredentialName || '',
-            microcredentialName: item?.microcredentialName || item?.MicrocredentialName || item?.microcredentialCourseName || item?.MicrocredentialCourseName || '',
-            microcredentialModuleMasterId: item?.microcredentialModuleMasterId ?? item?.MicrocredentialModuleMasterId ?? 0,
-            moduleName: item?.moduleName || item?.ModuleName || '',
-            degreeProgramName: item?.degreeProgramName || item?.DegreeProgramName || '',
-            degreeCourseName: item?.degreeCourseName || item?.DegreeCourseName || '',
-            semesterId: item?.semesterId ?? item?.SemesterId ?? 0,
-            unitName: item?.unitName || item?.UnitName || '',
-            quizCreatedName: item?.quizCreatedName || item?.QuizCreatedName || item?.quizCreaterName || item?.QuizCreaterName || item?.creatorName || '',
-            quizCreaterName: item?.quizCreaterName || item?.QuizCreaterName || item?.quizCreatedName || item?.QuizCreatedName || item?.creatorName || '',
-            dueDate: item?.dueDate || item?.DueDate || '',
-            gradeOutOf: item?.gradeOutOf ?? item?.GradeOutOf ?? 100,
-            isActive: Boolean(item?.isActive ?? item?.IsActive ?? item?.issubmit ?? item?.isSubmit ?? item?.IsSubmit ?? false),
-            issubmit: Boolean(item?.issubmit ?? item?.isSubmit ?? item?.IsSubmit ?? false),
-            createdOn: item?.createdOn || item?.CreatedOn || '',
-            updatedOn: item?.updatedOn || item?.UpdatedOn || ''
-        }))
+        ? rawList.map(item => {
+            const courseId = Number(
+                item?.microcredentialCourseId ??
+                item?.MicrocredentialCourseId ??
+                item?.courseId ??
+                item?.CourseId ??
+                item?.courseDetailsId ??
+                item?.CourseDetailsId ??
+                item?.quizCourseId ??
+                item?.QuizCourseId ??
+                0
+            );
+            const courseName =
+                item?.microcredentialCourseName ||
+                item?.MicrocredentialCourseName ||
+                item?.microcredentialName ||
+                item?.MicrocredentialName ||
+                item?.courseName ||
+                item?.CourseName ||
+                '';
+            const moduleId = Number(
+                item?.microcredentialModuleMasterId ??
+                item?.MicrocredentialModuleMasterId ??
+                item?.moduleMasterId ??
+                item?.ModuleMasterId ??
+                item?.moduleId ??
+                item?.ModuleId ??
+                0
+            );
+            const moduleName = item?.moduleName || item?.ModuleName || '';
+
+            return {
+                ...item,
+                quizId: Number(item?.quizId ?? item?.QuizId ?? item?.id ?? 0),
+                quizTitle: item?.quizTitle || item?.QuizTitle || item?.title || '',
+                quizDescription: item?.quizDescription || item?.QuizDescription || item?.description || item?.Description || '',
+                educationTypeId: Number(item?.educationTypeId ?? item?.EducationTypeId ?? 2),
+                educationTypeName: item?.educationTypeName || item?.EducationTypeName || '',
+                streamId: Number(item?.streamId ?? item?.StreamId ?? 0),
+                StreamId: Number(item?.streamId ?? item?.StreamId ?? 0),
+                streamName: item?.streamName || item?.StreamName || item?.stream || '',
+                StreamName: item?.streamName || item?.StreamName || item?.stream || '',
+                courseId,
+                CourseId: courseId,
+                courseDetailsId: courseId,
+                CourseDetailsId: courseId,
+                microcredentialCourseId: courseId,
+                MicrocredentialCourseId: courseId,
+                quizCourseId: courseId,
+                QuizCourseId: courseId,
+                courseName,
+                CourseName: courseName,
+                microcredentialCourseName: courseName,
+                MicrocredentialCourseName: courseName,
+                microcredentialName: courseName,
+                MicrocredentialName: courseName,
+                moduleMasterId: moduleId,
+                ModuleMasterId: moduleId,
+                microcredentialModuleMasterId: moduleId,
+                MicrocredentialModuleMasterId: moduleId,
+                moduleId,
+                ModuleId: moduleId,
+                moduleName,
+                ModuleName: moduleName,
+                degreeProgramName: item?.degreeProgramName || item?.DegreeProgramName || '',
+                degreeCourseName: item?.degreeCourseName || item?.DegreeCourseName || '',
+                semesterId: Number(item?.semesterId ?? item?.SemesterId ?? 0),
+                unitName: item?.unitName || item?.UnitName || '',
+                quizCreatedName: item?.quizCreatedName || item?.QuizCreatedName || item?.quizCreaterName || item?.QuizCreaterName || item?.creatorName || '',
+                quizCreaterName: item?.quizCreaterName || item?.QuizCreaterName || item?.quizCreatedName || item?.QuizCreatedName || item?.creatorName || '',
+                dueDate: item?.dueDate || item?.DueDate || '',
+                startDate: item?.startDate || item?.StartDate || item?.startDateTime || item?.StartDateTime || item?.quizStartDate || item?.QuizStartDate || item?.fromDate || item?.FromDate || item?.dueDate || item?.DueDate || '',
+                startTime: item?.startTime || item?.StartTime || item?.quizStartTime || item?.QuizStartTime || item?.fromTime || item?.FromTime || '10:00',
+                endDate: item?.endDate || item?.EndDate || item?.endDateTime || item?.EndDateTime || item?.quizEndDate || item?.QuizEndDate || item?.toDate || item?.ToDate || item?.dueDate || item?.DueDate || '',
+                endTime: item?.endTime || item?.EndTime || item?.quizEndTime || item?.QuizEndTime || item?.toTime || item?.ToTime || '18:00',
+                attemptsAllowed: Number(item?.attemptsAllowed ?? item?.AttemptsAllowed ?? item?.noOfAttempts ?? item?.NoOfAttempts ?? item?.attempts ?? item?.Attempts ?? item?.totalAttempt ?? item?.TotalAttempt ?? item?.attemptsTry ?? item?.AttemptsTry ?? item?.attemptTry ?? item?.AttemptTry ?? 1),
+                attemptTry: Number(item?.attemptsAllowed ?? item?.AttemptsAllowed ?? item?.noOfAttempts ?? item?.NoOfAttempts ?? item?.attempts ?? item?.Attempts ?? item?.totalAttempt ?? item?.TotalAttempt ?? item?.attemptsTry ?? item?.AttemptsTry ?? item?.attemptTry ?? item?.AttemptTry ?? 1),
+                gradeOutOf: item?.gradeOutOf ?? item?.GradeOutOf ?? 100,
+                isActive: Boolean(item?.isActive ?? item?.IsActive ?? item?.issubmit ?? item?.isSubmit ?? item?.IsSubmit ?? false),
+                issubmit: Boolean(item?.issubmit ?? item?.isSubmit ?? item?.IsSubmit ?? false),
+                createdOn: item?.createdOn || item?.CreatedOn || '',
+                updatedOn: item?.updatedOn || item?.UpdatedOn || ''
+            };
+        })
         : [];
 
     const rawPageDetail = data?.pageDetail || data?.PageDetail || {};
@@ -261,7 +318,17 @@ export function parseGetStreamByProgrammeErrorOutput(rawJson = {}, status = 500)
 export function parseDegreeQuizMasterAddUpdateOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
     const isSuccess = resolveSuccess(data, status);
-    const quizId = data?.quizId ?? data?.QuizId ?? data?.id ?? 0;
+    const quizId =
+        data?.quizId ??
+        data?.QuizId ??
+        data?.quizMasterId ??
+        data?.QuizMasterId ??
+        data?.data?.quizId ??
+        data?.data?.QuizId ??
+        data?.data?.quizMasterId ??
+        data?.data?.QuizMasterId ??
+        data?.id ??
+        0;
 
     return {
         success: isSuccess,
@@ -291,31 +358,416 @@ export function parseDegreeQuizMasterAddUpdateErrorOutput(rawJson = {}, status =
  */
 export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
-    const isSuccess = resolveSuccess(data, status);
-    const details = data?.degreeQuizDetails || data?.DegreeQuizDetails || data?.quizDetails || data?.QuizDetails || data;
+
+    const rawBasic = data?.quizBasicInfo || data?.QuizBasicInfo || {};
+
+    const rawDetails =
+        data?.quizBasicInfo ||
+        data?.QuizBasicInfo ||
+        data?.degreeQuizDetails ||
+        data?.DegreeQuizDetails ||
+        data?.quizDetails ||
+        data?.QuizDetails ||
+        data?.quizMaster ||
+        data?.QuizMaster ||
+        (Array.isArray(data?.quizDegreeList) && data.quizDegreeList[0]) ||
+        (Array.isArray(data?.degreeQuizList) && data.degreeQuizList[0]) ||
+        (Array.isArray(data?.data) && data.data[0]) ||
+        (data?.data && typeof data.data === 'object' && !Array.isArray(data.data) ? data.data : null) ||
+        (Array.isArray(data?.Table) && data.Table[0]) ||
+        (Array.isArray(data) ? data[0] : (typeof data === 'object' ? data : {}));
+
+    const rawSettings =
+        data?.quizTimingAndDisplay ||
+        data?.QuizTimingAndDisplay ||
+        data?.attemptsAndCompletionSettings ||
+        data?.AttemptsAndCompletionSettings ||
+        data?.resultsAndDisplaySettings ||
+        data?.ResultsAndDisplaySettings ||
+        data?.customizeQuizResultsDisplayseInModel ||
+        data?.CustomizeQuizResultsDisplayseInModel ||
+        data?.quizSettings ||
+        data?.QuizSettings ||
+        data?.quizSetting ||
+        data?.QuizSetting ||
+        data?.settings ||
+        data?.Settings ||
+        (Array.isArray(data?.Table1) && data.Table1[0]) ||
+        (Array.isArray(data?.Table2) && data.Table2[0]) ||
+        (Array.isArray(data?.quizSettingsList) && data.quizSettingsList[0]) ||
+        {};
+
+    const details = {
+        ...(typeof data === 'object' && !Array.isArray(data) ? data : {}),
+        ...(data?.quizTimingAndDisplay || data?.QuizTimingAndDisplay || {}),
+        ...(data?.attemptsAndCompletionSettings || data?.AttemptsAndCompletionSettings || {}),
+        ...(data?.resultsAndDisplaySettings || data?.ResultsAndDisplaySettings || {}),
+        ...(data?.customizeQuizResultsDisplayseInModel || data?.CustomizeQuizResultsDisplayseInModel || {}),
+        ...(rawSettings || {}),
+        ...(rawBasic || {}),
+        ...(rawDetails || {})
+    };
+
+    const hasQuizData = Boolean(
+        rawBasic?.quizId ||
+        rawBasic?.QuizId ||
+        details?.quizId ||
+        details?.QuizId ||
+        (Array.isArray(data?.quizDegreeList) && data.quizDegreeList.length > 0)
+    );
+    const isSuccess = (status >= 200 && status < 300 && hasQuizData) || resolveSuccess(data, status);
+
+    const streamId = Number(
+        details?.streamId ??
+        details?.StreamId ??
+        rawDetails?.streamId ??
+        rawDetails?.StreamId ??
+        rawSettings?.streamId ??
+        rawSettings?.StreamId ??
+        data?.streamId ??
+        data?.StreamId ??
+        0
+    );
+
+    const streamName =
+        details?.streamName ||
+        details?.StreamName ||
+        details?.stream ||
+        details?.Stream ||
+        rawDetails?.streamName ||
+        rawDetails?.StreamName ||
+        rawDetails?.stream ||
+        rawDetails?.Stream ||
+        rawSettings?.streamName ||
+        rawSettings?.StreamName ||
+        data?.streamName ||
+        data?.StreamName ||
+        '';
+
+    const courseId = Number(
+        details?.microcredentialCourseId ??
+        details?.MicrocredentialCourseId ??
+        details?.courseId ??
+        details?.CourseId ??
+        details?.courseDetailsId ??
+        details?.CourseDetailsId ??
+        details?.quizCourseId ??
+        details?.QuizCourseId ??
+        details?.courseMasterId ??
+        details?.CourseMasterId ??
+        details?.microCourseId ??
+        details?.MicroCourseId ??
+        details?.microcredentialCourseDetailId ??
+        details?.MicrocredentialCourseDetailId ??
+        details?.course_id ??
+        details?.Course_Id ??
+        rawDetails?.microcredentialCourseId ??
+        rawDetails?.MicrocredentialCourseId ??
+        rawDetails?.courseId ??
+        rawDetails?.CourseId ??
+        rawDetails?.courseDetailsId ??
+        rawDetails?.CourseDetailsId ??
+        rawDetails?.courseMasterId ??
+        rawDetails?.CourseMasterId ??
+        rawDetails?.microCourseId ??
+        rawDetails?.MicroCourseId ??
+        rawSettings?.microcredentialCourseId ??
+        rawSettings?.MicrocredentialCourseId ??
+        rawSettings?.courseId ??
+        rawSettings?.CourseId ??
+        data?.microcredentialCourseId ??
+        data?.courseId ??
+        0
+    );
+
+    const courseName =
+        details?.microcredentialCourseName ||
+        details?.MicrocredentialCourseName ||
+        details?.courseName ||
+        details?.CourseName ||
+        details?.microcredentialName ||
+        details?.MicrocredentialName ||
+        rawDetails?.microcredentialCourseName ||
+        rawDetails?.MicrocredentialCourseName ||
+        rawDetails?.courseName ||
+        rawDetails?.CourseName ||
+        rawDetails?.microcredentialName ||
+        rawDetails?.MicrocredentialName ||
+        rawSettings?.microcredentialCourseName ||
+        rawSettings?.courseName ||
+        data?.microcredentialCourseName ||
+        data?.courseName ||
+        '';
+
+    const moduleId = Number(
+        details?.microcredentialModuleMasterId ??
+        details?.MicrocredentialModuleMasterId ??
+        details?.moduleMasterId ??
+        details?.ModuleMasterId ??
+        details?.moduleId ??
+        details?.ModuleId ??
+        rawDetails?.microcredentialModuleMasterId ??
+        rawDetails?.MicrocredentialModuleMasterId ??
+        rawDetails?.moduleMasterId ??
+        rawDetails?.ModuleMasterId ??
+        rawDetails?.moduleId ??
+        rawDetails?.ModuleId ??
+        rawSettings?.microcredentialModuleMasterId ??
+        rawSettings?.moduleMasterId ??
+        data?.microcredentialModuleMasterId ??
+        data?.moduleMasterId ??
+        0
+    );
+
+    const moduleName =
+        details?.microcredentialModuleName ||
+        details?.MicrocredentialModuleName ||
+        details?.moduleName ||
+        details?.ModuleName ||
+        rawDetails?.microcredentialModuleName ||
+        rawDetails?.MicrocredentialModuleName ||
+        rawDetails?.moduleName ||
+        rawDetails?.ModuleName ||
+        rawSettings?.microcredentialModuleName ||
+        rawSettings?.moduleName ||
+        rawSettings?.ModuleName ||
+        data?.microcredentialModuleName ||
+        data?.moduleName ||
+        data?.ModuleName ||
+        '';
+
+    const dueDate =
+        details?.dueDate ||
+        details?.DueDate ||
+        rawDetails?.dueDate ||
+        rawDetails?.DueDate ||
+        rawSettings?.dueDate ||
+        rawSettings?.DueDate ||
+        data?.dueDate ||
+        data?.DueDate ||
+        '';
+
+    const startDate =
+        details?.startDate ||
+        details?.StartDate ||
+        details?.startDateTime ||
+        details?.StartDateTime ||
+        details?.quizStartDate ||
+        details?.QuizStartDate ||
+        details?.fromDate ||
+        details?.FromDate ||
+        details?.quizFromDate ||
+        details?.QuizFromDate ||
+        details?.activeFrom ||
+        details?.ActiveFrom ||
+        rawDetails?.startDate ||
+        rawDetails?.StartDate ||
+        rawDetails?.startDateTime ||
+        rawDetails?.StartDateTime ||
+        rawDetails?.quizStartDate ||
+        rawDetails?.QuizStartDate ||
+        rawDetails?.fromDate ||
+        rawDetails?.FromDate ||
+        rawSettings?.startDate ||
+        rawSettings?.StartDate ||
+        rawSettings?.startDateTime ||
+        rawSettings?.StartDateTime ||
+        data?.startDate ||
+        data?.StartDate ||
+        dueDate ||
+        '';
+
+    const startTime =
+        details?.startTime ||
+        details?.StartTime ||
+        details?.quizStartTime ||
+        details?.QuizStartTime ||
+        details?.fromTime ||
+        details?.FromTime ||
+        rawDetails?.startTime ||
+        rawDetails?.StartTime ||
+        rawDetails?.quizStartTime ||
+        rawDetails?.QuizStartTime ||
+        rawSettings?.startTime ||
+        rawSettings?.StartTime ||
+        data?.startTime ||
+        data?.StartTime ||
+        (startDate && startDate.includes('T') ? startDate.split('T')[1]?.substring(0, 5) : '') ||
+        '10:00';
+
+    const endDate =
+        details?.endDate ||
+        details?.EndDate ||
+        details?.endDateTime ||
+        details?.EndDateTime ||
+        details?.quizEndDate ||
+        details?.QuizEndDate ||
+        details?.toDate ||
+        details?.ToDate ||
+        details?.quizToDate ||
+        details?.QuizToDate ||
+        details?.activeTo ||
+        details?.ActiveTo ||
+        rawDetails?.endDate ||
+        rawDetails?.EndDate ||
+        rawDetails?.endDateTime ||
+        rawDetails?.EndDateTime ||
+        rawDetails?.quizEndDate ||
+        rawDetails?.QuizEndDate ||
+        rawDetails?.toDate ||
+        rawDetails?.ToDate ||
+        rawSettings?.endDate ||
+        rawSettings?.EndDate ||
+        rawSettings?.endDateTime ||
+        rawSettings?.EndDateTime ||
+        data?.endDate ||
+        data?.EndDate ||
+        dueDate ||
+        '';
+
+    const endTime =
+        details?.endTime ||
+        details?.EndTime ||
+        details?.quizEndTime ||
+        details?.QuizEndTime ||
+        details?.toTime ||
+        details?.ToTime ||
+        rawDetails?.endTime ||
+        rawDetails?.EndTime ||
+        rawDetails?.quizEndTime ||
+        rawDetails?.QuizEndTime ||
+        rawSettings?.endTime ||
+        rawSettings?.EndTime ||
+        data?.endTime ||
+        data?.EndTime ||
+        (endDate && endDate.includes('T') ? endDate.split('T')[1]?.substring(0, 5) : '') ||
+        '18:00';
+
+    const attemptsAllowed = Number(
+        rawSettings?.attemptsAllowed ??
+        rawSettings?.AttemptsAllowed ??
+        rawSettings?.noOfAttempts ??
+        rawSettings?.NoOfAttempts ??
+        rawSettings?.attempts ??
+        rawSettings?.Attempts ??
+        details?.attemptsAllowed ??
+        details?.AttemptsAllowed ??
+        details?.noOfAttempts ??
+        details?.NoOfAttempts ??
+        details?.attempts ??
+        details?.Attempts ??
+        rawDetails?.attemptsAllowed ??
+        rawDetails?.AttemptsAllowed ??
+        rawDetails?.noOfAttempts ??
+        rawDetails?.NoOfAttempts ??
+        rawDetails?.attempts ??
+        rawDetails?.Attempts ??
+        data?.attemptsAllowed ??
+        data?.AttemptsAllowed ??
+        rawSettings?.attemptsTry ??
+        rawSettings?.AttemptsTry ??
+        details?.attemptsTry ??
+        details?.AttemptsTry ??
+        rawDetails?.attemptsTry ??
+        rawDetails?.AttemptsTry ??
+        rawSettings?.totalAttempt ??
+        rawSettings?.TotalAttempt ??
+        details?.totalAttempt ??
+        details?.TotalAttempt ??
+        rawDetails?.totalAttempt ??
+        rawDetails?.TotalAttempt ??
+        rawSettings?.attemptLimit ??
+        rawSettings?.AttemptLimit ??
+        details?.attemptLimit ??
+        details?.AttemptLimit ??
+        rawSettings?.attemptTry ??
+        rawSettings?.AttemptTry ??
+        details?.attemptTry ??
+        details?.AttemptTry ??
+        rawDetails?.attemptTry ??
+        rawDetails?.AttemptTry ??
+        data?.attemptTry ??
+        data?.AttemptTry ??
+        1
+    );
+
+    const quizDetailsObj = details ? {
+        quizId: Number(details?.quizId ?? details?.QuizId ?? details?.id ?? 0),
+        quizTitle: details?.quizTitle || details?.QuizTitle || '',
+        quizDescription: details?.quizDescription || details?.QuizDescription || '',
+        educationTypeId: Number(details?.educationTypeId ?? details?.EducationTypeId ?? 2),
+        streamId,
+        StreamId: streamId,
+        streamName,
+        StreamName: streamName,
+        courseId,
+        CourseId: courseId,
+        courseDetailsId: courseId,
+        CourseDetailsId: courseId,
+        microcredentialCourseId: courseId,
+        MicrocredentialCourseId: courseId,
+        quizCourseId: courseId,
+        QuizCourseId: courseId,
+        courseName,
+        CourseName: courseName,
+        microcredentialCourseName: courseName,
+        MicrocredentialCourseName: courseName,
+        moduleMasterId: moduleId,
+        ModuleMasterId: moduleId,
+        microcredentialModuleMasterId: moduleId,
+        MicrocredentialModuleMasterId: moduleId,
+        moduleId,
+        ModuleId: moduleId,
+        moduleName,
+        ModuleName: moduleName,
+        microcredentialModuleName: moduleName,
+        MicrocredentialModuleName: moduleName,
+        gradeOutOf: details?.gradeOutOf ?? details?.GradeOutOf ?? 10,
+        dueDate,
+        DueDate: dueDate,
+        gradeBook: details?.gradeBook || details?.GradeBook || 'In Grade Book',
+        yearRange: details?.yearRange || details?.YearRange || '',
+        isActive: Boolean(details?.isActive ?? details?.IsActive ?? true),
+        hasTimeLimit: Boolean(details?.hasTimeLimit ?? details?.HasTimeLimit ?? true),
+        timeLimitMinutes: details?.timeLimitMinutes ?? details?.TimeLimitMinutes ?? 120,
+        questionsPerPageId: details?.questionsPerPageId ?? details?.QuestionsPerPageId ?? 1,
+        preventPreviousBackNavigation: Boolean(details?.preventPreviousBackNavigation ?? details?.PreventPreviousBackNavigation ?? true),
+        shuffleQuestionsAndSections: Boolean(details?.shuffleQuestionsAndSections ?? details?.ShuffleQuestionsAndSections ?? false),
+        allowHints: Boolean(details?.allowHints ?? details?.AllowHints ?? true),
+        disableInternalMessages: Boolean(details?.disableInternalMessages ?? details?.DisableInternalMessages ?? false),
+        headerDescription: details?.headerDescription || details?.HeaderDescription || '',
+        footerDescription: details?.footerDescription || details?.FooterDescription || '',
+        startDate,
+        StartDate: startDate,
+        startTime,
+        StartTime: startTime,
+        endDate,
+        EndDate: endDate,
+        endTime,
+        EndTime: endTime,
+        password: details?.password || details?.Password || '',
+        attemptsAllowed,
+        AttemptsAllowed: attemptsAllowed,
+        attemptTry: attemptsAllowed,
+        AttemptTry: attemptsAllowed,
+        attemptsTry: attemptsAllowed,
+        AttemptsTry: attemptsAllowed,
+        noOfAttempts: attemptsAllowed,
+        NoOfAttempts: attemptsAllowed,
+        categoryId: details?.categoryId ?? details?.CategoryId ?? 1,
+        deductPoints: Boolean(details?.deductPoints ?? details?.DeductPoints ?? false),
+        deductionInPercentage: details?.deductionInPercentage ?? details?.DeductionInPercentage ?? 0,
+        autoPublishResults: Boolean(details?.autoPublishResults ?? details?.AutoPublishResults ?? true),
+        syncToGradeBook: Boolean(details?.syncToGradeBook ?? details?.SyncToGradeBook ?? true),
+        rawDetails: details
+    } : null;
 
     return {
         success: isSuccess,
         status,
         message: resolveMessage(data, isSuccess ? 'Quiz details fetched successfully.' : 'Failed to fetch quiz details.'),
-        quizDetails: details ? {
-            quizId: details?.quizId ?? details?.QuizId ?? 0,
-            quizTitle: details?.quizTitle || details?.QuizTitle || '',
-            quizDescription: details?.quizDescription || details?.QuizDescription || '',
-            educationTypeId: details?.educationTypeId ?? details?.EducationTypeId ?? 2,
-            streamId: details?.streamId ?? details?.StreamId ?? 0,
-            streamName: details?.streamName || details?.StreamName || details?.stream || '',
-            microcredentialCourseId: details?.microcredentialCourseId ?? details?.MicrocredentialCourseId ?? 0,
-            microcredentialCourseName: details?.microcredentialCourseName || details?.MicrocredentialCourseName || '',
-            microcredentialModuleMasterId: details?.microcredentialModuleMasterId ?? details?.MicrocredentialModuleMasterId ?? 0,
-            moduleName: details?.moduleName || details?.ModuleName || '',
-            gradeOutOf: details?.gradeOutOf ?? details?.GradeOutOf ?? 100,
-            dueDate: details?.dueDate || details?.DueDate || '',
-            gradeBook: details?.gradeBook || details?.GradeBook || 'In Grade Book',
-            yearRange: details?.yearRange || details?.YearRange || '',
-            isActive: Boolean(details?.isActive ?? details?.IsActive ?? true),
-            rawDetails: details
-        } : null,
+        quizDetails: quizDetailsObj,
+        quizMaster: quizDetailsObj,
         rawData: data
     };
 }
@@ -370,23 +822,62 @@ export function parseDegreeQuizQuestionsListOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
     const isSuccess = resolveSuccess(data, status);
 
-    const rawList = data?.questionsList || data?.QuestionsList || data?.questionList || data?.QuestionList || [];
+    const rawList = data?.questionsList || data?.QuestionsList || data?.questionList || data?.QuestionList || (Array.isArray(data) ? data : []);
     const questionsList = Array.isArray(rawList)
-        ? rawList.map(item => ({
-            ...item,
-            questionsId: item?.questionsId ?? item?.QuestionsId ?? item?.id ?? 0,
-            questionId: item?.questionId ?? item?.QuestionId ?? item?.questionsId ?? item?.QuestionsId ?? 0,
-            question: item?.question || item?.Question || item?.questionText || item?.QuestionText || '',
-            questionText: item?.questionText || item?.QuestionText || item?.question || item?.Question || '',
-            questionType: item?.questionType || item?.QuestionType || '',
-            degreeQuestionType: Number(item?.degreeQuestionType ?? item?.DegreeQuestionType ?? item?.questionTypeId ?? item?.QuestionTypeId ?? 1),
-            points: Number(item?.points ?? item?.Points ?? 0),
-            isActive: Boolean(item?.isActive ?? item?.IsActive ?? true),
-            createdOn: item?.createdOn || item?.CreatedOn || '',
-            options: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
-            degreeAnswersOptions: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
-            rawItem: item
-        }))
+        ? rawList.map(item => {
+            const qId = Number(item?.questionsId ?? item?.QuestionsId ?? item?.questionId ?? item?.QuestionId ?? item?.id ?? 0);
+            const rawQuestionName =
+                item?.finalQuestionName ||
+                item?.FinalQuestionName ||
+                item?.questionText ||
+                item?.QuestionText ||
+                item?.question ||
+                item?.Question ||
+                item?.questionName ||
+                item?.QuestionName ||
+                '';
+            const cleanText = rawQuestionName.replace(/<[^>]*>?/gm, '').trim();
+            const qTypeId = Number(item?.questionTypeId ?? item?.QuestionTypeId ?? item?.degreeQuestionType ?? item?.DegreeQuestionType ?? 1);
+            const qTypeName =
+                item?.questionTypeName ||
+                item?.QuestionTypeName ||
+                item?.questionType ||
+                item?.QuestionType ||
+                '';
+
+            return {
+                ...item,
+                questionsId: qId,
+                QuestionsId: qId,
+                questionId: qId,
+                QuestionId: qId,
+                finalQuestionName: rawQuestionName,
+                FinalQuestionName: rawQuestionName,
+                question: rawQuestionName,
+                Question: rawQuestionName,
+                questionText: rawQuestionName,
+                QuestionText: rawQuestionName,
+                cleanQuestionText: cleanText,
+                questionTypeId: qTypeId,
+                QuestionTypeId: qTypeId,
+                degreeQuestionType: qTypeId,
+                DegreeQuestionType: qTypeId,
+                questionTypeName: qTypeName,
+                QuestionTypeName: qTypeName,
+                questionType: qTypeName,
+                QuestionType: qTypeName,
+                points: Number(item?.points ?? item?.Points ?? 1),
+                Points: Number(item?.points ?? item?.Points ?? 1),
+                isActive: Boolean(item?.isActive ?? item?.IsActive ?? true),
+                isDeleted: Boolean(item?.isDeleted ?? item?.IsDeleted ?? false),
+                createdOn: item?.createdOn || item?.CreatedOn || '',
+                updatedOn: item?.updatedOn || item?.UpdatedOn || '',
+                quizQuestionCreatedBy: item?.quizQuestionCreatedBy || item?.QuizQuestionCreatedBy || '',
+                options: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
+                degreeAnswersOptions: item?.degreeAnswersOptions || item?.DegreeAnswersOptions || item?.options || item?.degreeAnswerOptionList || item?.DegreeAnswerOptionList || [],
+                rawItem: item
+            };
+        })
         : [];
 
     const rawPageDetail = data?.pageDetail || data?.PageDetail || {};
@@ -394,7 +885,7 @@ export function parseDegreeQuizQuestionsListOutput(rawJson = {}, status = 200) {
         totalRecords: rawPageDetail?.totalRecords ?? rawPageDetail?.TotalRecords ?? questionsList.length,
         totalPoints: rawPageDetail?.totalPoints ?? rawPageDetail?.TotalPoints ?? 0,
         pageNo: rawPageDetail?.pageNo ?? rawPageDetail?.PageNo ?? 1,
-        pageSize: rawPageDetail?.pageSize ?? rawPageDetail?.PageSize ?? 10
+        pageSize: rawPageDetail?.pageSize ?? rawPageDetail?.PageSize ?? 100
     };
 
     return {

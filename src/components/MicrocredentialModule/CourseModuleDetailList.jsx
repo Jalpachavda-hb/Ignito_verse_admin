@@ -25,9 +25,11 @@ import {
   logJsError,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { useToast } from "../../context/ToastContext";
 
 export default function CourseModuleDetailList() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const location = useLocation();
   const params = useParams();
 
@@ -61,15 +63,34 @@ export default function CourseModuleDetailList() {
   // Auto-dismiss success notification
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 4000);
+      const timer = setTimeout(() => setSuccessMessage(""), 4500);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  // Show toast notification on mount if passed in location state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      showToast(location.state.successMessage, "success");
+    }
+    if (location.state?.errorMessage) {
+      showToast(location.state.errorMessage, "error");
+    }
+  }, [location.state, showToast]);
+
   // Fetch Modules for this specific Course using GetMicrocredentialModuleByCourseId API
-  const fetchModules = useCallback(async () => {
+  const fetchModules = useCallback(async (isManualRefresh = false) => {
     if (!courseId) {
-      setErrorMessage("No Course ID specified. Please select a course from the course list.");
+      const msg = "No Course ID specified. Please select a course from the course list.";
+      setErrorMessage(msg);
+      showToast(msg, "error");
       return;
     }
 
@@ -82,22 +103,30 @@ export default function CourseModuleDetailList() {
       if (response && (response.success !== false || Array.isArray(response.microcredentialModuleList))) {
         const list = response.microcredentialModuleList || [];
         setModuleList(Array.isArray(list) ? list : []);
+        if (isManualRefresh) {
+          showToast(`Course modules refreshed (${(list || []).length} modules loaded)`, "success");
+        }
       } else if (response?.message || response?.errorDescription) {
         const msg = response.message || response.errorDescription;
         setErrorMessage(msg);
+        showToast(msg, "error");
         logJsError(msg, "", "CourseModuleDetailList.jsx fetchModules");
       } else {
         setModuleList([]);
+        if (isManualRefresh) {
+          showToast("No modules found for this course.", "info");
+        }
       }
     } catch (err) {
       console.error("Error in fetchModules:", err);
       const msg = err.message || "An unexpected error occurred while fetching modules.";
       setErrorMessage(msg);
+      showToast(msg, "error");
       logJsError(msg, err.stack, "CourseModuleDetailList.jsx fetchModules");
     } finally {
       setLoading(false);
     }
-  }, [courseId]);
+  }, [courseId, showToast]);
 
   useEffect(() => {
     fetchModules();
@@ -135,18 +164,22 @@ export default function CourseModuleDetailList() {
       );
 
       if (response && response.success !== false) {
-        setSuccessMessage(response.message || "Module deleted successfully.");
+        const msg = response.message || `Module "${deleteModalItem.moduleName}" deleted successfully.`;
+        setSuccessMessage(msg);
+        showToast(msg, "success");
         setDeleteModalItem(null);
         fetchModules();
       } else {
         const msg = response?.message || "Failed to delete module.";
         setErrorMessage(msg);
+        showToast(msg, "error");
         logJsError(msg, "", "CourseModuleDetailList.jsx handleDeleteConfirm");
       }
     } catch (err) {
       console.error("Error deleting module:", err);
       const msg = err.message || "An unexpected error occurred.";
       setErrorMessage(msg);
+      showToast(msg, "error");
       logJsError(msg, err.stack, "CourseModuleDetailList.jsx handleDeleteConfirm");
     } finally {
       setDeleting(false);
@@ -289,7 +322,7 @@ export default function CourseModuleDetailList() {
 
             <button
               type="button"
-              onClick={fetchModules}
+              onClick={() => fetchModules(true)}
               disabled={loading}
               className="ml-2 rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
               title="Refresh modules"

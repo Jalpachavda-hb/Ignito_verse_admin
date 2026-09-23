@@ -14,7 +14,6 @@ import {
   UserCheckIcon,
   MedalAwardIcon,
   TrendingUpIcon,
-  BarChartReportIcon,
   WebsiteContentIcon,
   HomeMenuIcon,
   HandshakeIcon,
@@ -77,16 +76,16 @@ const navItems: NavItem[] = [
         path: "/microcredential/quiz-result",
         icon: <TrendingUpIcon className="w-4 h-4" />,
       },
-      {
-        name: "Microcredential Checkpoint Quiz",
-        path: "/microcredential/checkpoint-quiz",
-        icon: <MedalAwardIcon className="w-4 h-4" />,
-      },
-      {
-        name: "Microcredential Checkpoint Quiz Report",
-        path: "/microcredential/checkpoint-quiz-report",
-        icon: <BarChartReportIcon className="w-4 h-4" />,
-      },
+      // {
+      //   name: "Microcredential Checkpoint Quiz",
+      //   path: "/microcredential/checkpoint-quiz",
+      //   icon: <MedalAwardIcon className="w-4 h-4" />,
+      // },
+      // {
+      //   name: "Microcredential Checkpoint Quiz Report",
+      //   path: "/microcredential/checkpoint-quiz-report",
+      //   icon: <BarChartReportIcon className="w-4 h-4" />,
+      // },
     ],
   },
 
