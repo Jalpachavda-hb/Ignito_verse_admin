@@ -3,12 +3,14 @@ import { Outlet } from "react-router";
 import AppHeader from "./AppHeader";
 import Backdrop from "./Backdrop";
 import AppSidebar from "./AppSidebar";
+import { TopProgressBar } from "../components/common/DataLoader";
 
 const LayoutContent: React.FC = () => {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
 
   return (
     <div className="min-h-screen xl:flex print:block print:min-h-0">
+      <TopProgressBar />
       <div className="print:hidden">
         <AppSidebar />
         <Backdrop />

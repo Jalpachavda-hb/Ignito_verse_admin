@@ -58,6 +58,35 @@ async function parseFetchResponse(res, options = {}) {
   };
 }
 
+let activeRequestCount = 0;
+const apiLoadingListeners = new Set();
+
+function notifyApiLoadingListeners() {
+  const isLoading = activeRequestCount > 0;
+  apiLoadingListeners.forEach((fn) => {
+    try {
+      fn(isLoading, activeRequestCount);
+    } catch (e) {
+      console.warn('apiClient listener error:', e);
+    }
+  });
+}
+
+/**
+ * Subscribe to global API loading status (active network requests)
+ * @param {(isLoading: boolean, count: number) => void} listener
+ * @returns {() => void} unsubscribe function
+ */
+export function subscribeToApiLoading(listener) {
+  apiLoadingListeners.add(listener);
+  listener(activeRequestCount > 0, activeRequestCount);
+  return () => apiLoadingListeners.delete(listener);
+}
+
+export function getActiveRequestCount() {
+  return activeRequestCount;
+}
+
 /**
  * Custom fetch wrapper for API communication.
  * 
@@ -119,6 +148,9 @@ export async function apiClient(endpoint, options = {}) {
     delete headers['Authorization'];
   }
 
+  activeRequestCount++;
+  notifyApiLoadingListeners();
+
   try {
     const res = await fetch(url, {
       ...options,
@@ -151,5 +183,9 @@ export async function apiClient(endpoint, options = {}) {
       ok: false,
       error,
     };
+  } finally {
+    activeRequestCount = Math.max(0, activeRequestCount - 1);
+    notifyApiLoadingListeners();
   }
 }
+

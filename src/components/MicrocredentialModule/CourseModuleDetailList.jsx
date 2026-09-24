@@ -26,6 +26,7 @@ import {
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
 import { useToast } from "../../context/ToastContext";
+import { TableLoader } from "../common/DataLoader";
 
 export default function CourseModuleDetailList() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export default function CourseModuleDetailList() {
 
   // Data & loading states
   const [moduleList, setModuleList] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(
     location.state?.successMessage || ""
@@ -357,14 +358,7 @@ export default function CourseModuleDetailList() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="size-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                      <span className="text-sm">Loading course modules...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableLoader colSpan={5} text="Loading course modules..." />
               ) : paginatedModules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">

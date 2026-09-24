@@ -26,6 +26,7 @@ import {
   logJsError,
 } from "../../services/adminMicrocredentialService";
 import { useToast } from "../../context/ToastContext";
+import { TableLoader } from "../common/DataLoader";
 
 export default function ModuleTopicDetailList() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function ModuleTopicDetailList() {
 
   // Data & loading states
   const [topicList, setTopicList] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(
     location.state?.successMessage || ""
@@ -417,14 +418,7 @@ export default function ModuleTopicDetailList() {
 
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="size-6 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
-                      <span className="text-sm">Loading module topics...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableLoader colSpan={6} text="Loading module topics..." />
               ) : paginatedTopics.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="py-12 text-center text-gray-500 dark:text-gray-400 text-sm">

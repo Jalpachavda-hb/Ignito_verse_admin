@@ -19,13 +19,14 @@ import {
   getGoogleMeetRecordingAndAttendeeInfo,
 } from "../../services/microcredentialGoogleMeetService";
 import { useToast } from "../../context/ToastContext";
+import { TableLoader } from "../common/DataLoader";
 
 export default function GoogleMeetList() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   const [meets, setMeets] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Pagination & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -273,14 +274,7 @@ export default function GoogleMeetList() {
 
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {loading ? (
-                <tr>
-                  <td colSpan={13} className="py-14 text-center text-sm text-gray-400">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="size-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-                      <span>Loading Google Meet sessions...</span>
-                    </div>
-                  </td>
-                </tr>
+                <TableLoader colSpan={13} text="Loading Google Meet sessions..." />
               ) : filteredMeets.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="py-14 text-center text-sm text-gray-400 font-medium">

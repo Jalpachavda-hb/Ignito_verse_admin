@@ -27,6 +27,7 @@ import {
   microcredentialCourseExcelInsert,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { TableLoader } from "../common/DataLoader";
 
 export default function MicrocredentialCourse() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function MicrocredentialCourse() {
 
   // Course data and loading states
   const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState(
     location.state?.successMessage || ""
@@ -785,18 +786,11 @@ export default function MicrocredentialCourse() {
             </TableHeader>
 
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-              {loading && courses.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={13}
-                    className="py-14 text-center text-theme-sm text-gray-500 dark:text-gray-400"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="size-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-                      <span>Loading microcredential courses...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
+              {loading ? (
+                <TableLoader
+                  colSpan={13}
+                  text="Loading microcredential courses..."
+                />
               ) : paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell

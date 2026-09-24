@@ -11,13 +11,14 @@ import {
 } from "../../icons";
 import { getZoomMeetingList } from "../../services/microcredentialZoomService";
 import { useToast } from "../../context/ToastContext";
+import { TableLoader } from "../common/DataLoader";
 
 export default function ZoomMeetingList() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   const [meetings, setMeetings] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -257,14 +258,7 @@ export default function ZoomMeetingList() {
 
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="py-14 text-center text-sm text-gray-400">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="size-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-                      <span>Loading Zoom meetings...</span>
-                    </div>
-                  </td>
-                </tr>
+                <TableLoader colSpan={9} text="Loading Zoom meetings..." />
               ) : filteredMeetings.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-14 text-center text-sm text-gray-400 dark:text-gray-500 font-medium">

@@ -19,13 +19,14 @@ import {
 } from "../../icons";
 import { getGoogleCalendarEventList } from "../../services/microcredentialGoogleCalendarService";
 import { useToast } from "../../context/ToastContext";
+import { TableLoader } from "../common/DataLoader";
 
 export default function GoogleCalendarList() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("calendar"); // "calendar" | "table"
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -315,14 +316,7 @@ export default function GoogleCalendarList() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-gray-500">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <div className="size-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent"></div>
-                          <span>Loading calendar events...</span>
-                        </div>
-                      </td>
-                    </tr>
+                    <TableLoader colSpan={7} text="Loading calendar events..." />
                   ) : events.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-gray-500 dark:text-gray-400">

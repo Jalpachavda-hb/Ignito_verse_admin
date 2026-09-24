@@ -22,6 +22,7 @@ import {
   deleteTestimonialReview,
 } from "../../services/AdminHomePageServices";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { TableLoader } from "../common/DataLoader";
 
 export default function TestimonialList({
   initialData = null,
@@ -33,7 +34,7 @@ export default function TestimonialList({
 
   // Data and UI states
   const [testimonials, setTestimonials] = useState(initialData || []);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -415,14 +416,7 @@ export default function TestimonialList({
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-gray-500">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="size-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-                      <span>Loading testimonials...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <TableLoader colSpan={6} text="Loading testimonials..." />
               ) : processedData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="py-12 text-center text-sm text-gray-500">
