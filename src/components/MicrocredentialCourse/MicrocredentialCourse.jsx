@@ -1121,7 +1121,9 @@ export default function MicrocredentialCourse() {
           onClick={handleCloseActiveModal}
         >
           <div
-            className="relative max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+            className={`relative max-h-[85vh] w-full ${
+              activeModalType === "description" ? "max-w-2xl" : "max-w-lg"
+            } overflow-y-auto rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1152,8 +1154,21 @@ export default function MicrocredentialCourse() {
             <div className="mt-4 text-xs text-gray-700 dark:text-gray-300">
               {/* About Course */}
               {activeModalType === "about" && (
-                <div className="rounded-xl bg-gray-50 p-4 leading-relaxed whitespace-pre-line dark:bg-gray-800/40">
-                  {activeModalCourse.aboutMicrocredentialCourse || (
+                <div className="rounded-xl bg-gray-50 p-4 leading-relaxed dark:bg-gray-800/40">
+                  {activeModalCourse.aboutMicrocredentialCourse ? (
+                    /<[a-z][\s\S]*>/i.test(activeModalCourse.aboutMicrocredentialCourse) ? (
+                      <div
+                        className="space-y-2 break-words text-xs text-gray-700 dark:text-gray-300 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_strong]:font-semibold [&_a]:text-brand-500 [&_a]:underline"
+                        dangerouslySetInnerHTML={{
+                          __html: activeModalCourse.aboutMicrocredentialCourse,
+                        }}
+                      />
+                    ) : (
+                      <div className="whitespace-pre-line text-xs text-gray-700 dark:text-gray-300">
+                        {activeModalCourse.aboutMicrocredentialCourse}
+                      </div>
+                    )
+                  ) : (
                     <span className="italic text-gray-400">No about information provided for this course.</span>
                   )}
                 </div>
@@ -1161,8 +1176,15 @@ export default function MicrocredentialCourse() {
 
               {/* Course Description */}
               {activeModalType === "description" && (
-                <div className="max-h-96 overflow-y-auto rounded-xl bg-gray-50 p-4 leading-relaxed whitespace-pre-line dark:bg-gray-800/40">
-                  {activeModalCourse.microcredentialCourseDescription || (
+                <div className="max-h-96 overflow-y-auto rounded-xl bg-gray-50 p-4 leading-relaxed dark:bg-gray-800/40">
+                  {activeModalCourse.microcredentialCourseDescription ? (
+                    <div
+                      className="space-y-2 break-words text-xs text-gray-700 dark:text-gray-300 [&_p]:mb-2 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:mb-1 [&_strong]:font-semibold [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold [&_a]:text-brand-500 [&_a]:underline"
+                      dangerouslySetInnerHTML={{
+                        __html: activeModalCourse.microcredentialCourseDescription,
+                      }}
+                    />
+                  ) : (
                     <span className="italic text-gray-400">No description provided for this course.</span>
                   )}
                 </div>

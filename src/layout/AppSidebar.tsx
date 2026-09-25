@@ -323,7 +323,7 @@ const AppSidebar: React.FC = () => {
             />
           ) : (
             <img
-              src="/favicon copy.png"
+              src="/fav.png"
               alt="Ignitoverse Icon"
               className="h-8 w-8 object-contain"
             />
