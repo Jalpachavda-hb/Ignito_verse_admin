@@ -16,6 +16,7 @@ import {
   getDegreeQuizDetailsByQuizId,
   finalizeDegreeQuiz
 } from "../../services/AdminQuizPageService";
+import { formatDisplayDate } from "./AddEditMicrocredentialQuiz";
 
 export const QUESTION_TYPES = [
   { id: 1, name: "Multiple Choice", desc: "Single correct option out of multiple choices" },
@@ -34,10 +35,18 @@ export default function MicrocredentialQuizQuestionsPage() {
   // Tab: "editor" | "list"
   const [activeTab, setActiveTab] = useState(location.state?.fromAdd ? "editor" : "editor");
 
-  // Quiz Meta
+  // Quiz Meta (Initialized with complete data from Step 1)
   const [quizInfo, setQuizInfo] = useState({
     quizTitle: location.state?.quizTitle || "Quiz Questions",
+    streamName: location.state?.streamName || "",
+    courseName: location.state?.courseName || "",
     moduleName: location.state?.moduleName || "",
+    yearRange: location.state?.yearRange || "",
+    gradeOutOf: location.state?.gradeOutOf ?? 0,
+    startDate: location.state?.startDate || "",
+    endDate: location.state?.endDate || "",
+    timeLimitMinutes: location.state?.timeLimitMinutes ?? 0,
+    attemptsAllowed: location.state?.attemptsAllowed ?? 0,
   });
 
   // Questions List State
@@ -180,10 +189,19 @@ export default function MicrocredentialQuizQuestionsPage() {
         const res = await getDegreeQuizDetailsByQuizId(quizId);
         const target = res?.quizMaster || res?.quizDetails;
         if (res?.success !== false && target) {
-          setQuizInfo({
-            quizTitle: target.quizTitle || "Quiz Questions",
-            moduleName: target.moduleName || "",
-          });
+          setQuizInfo((prev) => ({
+            ...prev,
+            quizTitle: target.quizTitle || prev.quizTitle || "Quiz Questions",
+            moduleName: target.moduleName || prev.moduleName || "",
+            courseName: target.courseName || prev.courseName || "",
+            streamName: target.streamName || prev.streamName || "",
+            yearRange: target.yearRange || prev.yearRange || "",
+            gradeOutOf: target.gradeOutOf ?? prev.gradeOutOf ?? 0,
+            startDate: target.startDate || prev.startDate || "",
+            endDate: target.endDate || prev.endDate || "",
+            timeLimitMinutes: target.timeLimitMinutes ?? prev.timeLimitMinutes ?? 0,
+            attemptsAllowed: target.attemptsAllowed ?? prev.attemptsAllowed ?? 0,
+          }));
           setQuizMasterDetails(target);
         }
       } catch (e) {
@@ -698,36 +716,78 @@ export default function MicrocredentialQuizQuestionsPage() {
         pageTitle="Quiz Questions Manager"
       />
 
-      {/* Top Header & Context Card */}
-      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Stepper Header (Circle 1 ------ Circle 2 active) */}
+      <div className="mb-6 flex items-center justify-between w-full px-2">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/microcredential/quiz-edit/${quizId}`}
+            className="flex items-center justify-center size-8 rounded-full border border-gray-400 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold text-xs hover:border-brand-500 hover:text-brand-500 transition shadow-xs"
+            title="Return to Step 1: Quiz Details"
+          >
+            1
+          </Link>
+        </div>
+        <div className="flex-1 h-[2px] bg-red-200 dark:bg-gray-700 mx-4"></div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center size-8 rounded-full border-2 border-red-600 bg-white text-red-600 font-bold text-xs shadow-xs">
+            2
+          </div>
+        </div>
+      </div>
+
+      {/* Top Header & Context Card with Full Quiz Data Summary */}
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-base font-bold text-gray-900 dark:text-white">
-                {quizInfo.quizTitle}
-              </h1>
-              <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="rounded-full bg-red-50 border border-red-200 px-2.5 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300">
                 Quiz #{quizId}
               </span>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-                {questions.length} Questions | {totalPoints} Pts
-              </span>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                {quizInfo.quizTitle || "Untitled Quiz"}
+              </h1>
             </div>
-            {quizInfo.moduleName && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Module: {quizInfo.moduleName}
-              </p>
-            )}
+
+            {/* Stream, Course, Module Badges */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400 mt-2">
+              {quizInfo.streamName && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2.5 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                  <span className="text-gray-400 font-normal">Stream:</span> {quizInfo.streamName}
+                </span>
+              )}
+              {quizInfo.courseName && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-300 border border-blue-100 dark:border-blue-900/40">
+                  <span className="text-blue-400 font-normal">Course:</span> {quizInfo.courseName}
+                </span>
+              )}
+              {quizInfo.moduleName && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-2.5 py-1 font-medium text-purple-700 dark:bg-purple-950/30 dark:text-purple-300 border border-purple-100 dark:border-purple-900/40">
+                  <span className="text-purple-400 font-normal">Module:</span> {quizInfo.moduleName}
+                </span>
+              )}
+              {quizInfo.yearRange && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-100 dark:border-amber-900/40">
+                  <span className="text-amber-400 font-normal">Year:</span> {quizInfo.yearRange}
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <Link
+              to={`/microcredential/quiz-edit/${quizId}`}
+              className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition cursor-pointer inline-flex items-center gap-1.5"
+            >
+              &larr; Edit Quiz Details
+            </Link>
+
             {activeTab === "editor" ? (
               <button
                 type="button"
                 onClick={() => setActiveTab("list")}
-                className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition cursor-pointer"
+                className="rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300 transition cursor-pointer"
               >
-                &larr; View Questions List ({questions.length})
+                View Questions List ({questions.length})
               </button>
             ) : (
               <button
@@ -743,7 +803,7 @@ export default function MicrocredentialQuizQuestionsPage() {
               type="button"
               onClick={handleFinalizeQuiz}
               disabled={finalizing}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+              className="rounded-xl bg-[#991b1b] hover:bg-[#7f1d1d] px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
             >
               {finalizing ? (
                 <>
@@ -760,6 +820,44 @@ export default function MicrocredentialQuizQuestionsPage() {
                 </>
               )}
             </button>
+          </div>
+        </div>
+
+        {/* Quick Quiz Parameters Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 pt-4 text-xs">
+          <div className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5">Questions Count</span>
+            <span className="font-bold text-gray-900 dark:text-white text-sm">
+              {questions.length} Questions
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5">Total Points</span>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+              {totalPoints || (Number(quizInfo.gradeOutOf) || 0)} Pts
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5">Start Date</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">
+              {quizInfo.startDate ? formatDisplayDate(quizInfo.startDate) : "Always Available"}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5">Time Limit</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">
+              {Number(quizInfo.timeLimitMinutes) > 0 ? `${quizInfo.timeLimitMinutes} min` : "No limit"}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 col-span-2 sm:col-span-1">
+            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5">Attempts Allowed</span>
+            <span className="font-semibold text-gray-800 dark:text-gray-200">
+              {Number(quizInfo.attemptsAllowed) > 0 ? `${quizInfo.attemptsAllowed} attempt(s)` : "No limit / 1"}
+            </span>
           </div>
         </div>
       </div>

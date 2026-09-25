@@ -24,6 +24,9 @@ function resolveSuccess(rawJson, status) {
     const isHttpOk = status >= 200 && status < 300;
     const explicitSuccess = rawJson?.isSuccess ?? rawJson?.IsSuccess ?? rawJson?.success ?? rawJson?.Success;
     if (explicitSuccess !== undefined && explicitSuccess !== null) {
+        if (typeof explicitSuccess === 'string') {
+            return explicitSuccess.trim().toLowerCase() === 'true' && isHttpOk;
+        }
         return Boolean(explicitSuccess) && isHttpOk;
     }
     return isHttpOk;
@@ -536,7 +539,15 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         data?.ModuleName ||
         '';
 
+    const rawAvailList = data?.availabilityDatesAndConditionsList || data?.AvailabilityDatesAndConditionsList || [];
+    const firstAvail = (Array.isArray(rawAvailList) && rawAvailList[0]) || {};
+
+    const rawTimeLimitList = data?.quizTimeLimitList || data?.QuizTimeLimitList || [];
+    const firstTimeLimit = (Array.isArray(rawTimeLimitList) && rawTimeLimitList[0]) || {};
+
     const dueDate =
+        rawBasic?.dueDate ||
+        rawBasic?.DueDate ||
         details?.dueDate ||
         details?.DueDate ||
         rawDetails?.dueDate ||
@@ -548,6 +559,8 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         '';
 
     const startDate =
+        firstAvail?.startDate ||
+        firstAvail?.StartDate ||
         details?.startDate ||
         details?.StartDate ||
         details?.startDateTime ||
@@ -556,28 +569,15 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         details?.QuizStartDate ||
         details?.fromDate ||
         details?.FromDate ||
-        details?.quizFromDate ||
-        details?.QuizFromDate ||
-        details?.activeFrom ||
-        details?.ActiveFrom ||
         rawDetails?.startDate ||
         rawDetails?.StartDate ||
-        rawDetails?.startDateTime ||
-        rawDetails?.StartDateTime ||
-        rawDetails?.quizStartDate ||
-        rawDetails?.QuizStartDate ||
-        rawDetails?.fromDate ||
-        rawDetails?.FromDate ||
-        rawSettings?.startDate ||
-        rawSettings?.StartDate ||
-        rawSettings?.startDateTime ||
-        rawSettings?.StartDateTime ||
         data?.startDate ||
         data?.StartDate ||
-        dueDate ||
         '';
 
     const startTime =
+        firstAvail?.startTime ||
+        firstAvail?.StartTime ||
         details?.startTime ||
         details?.StartTime ||
         details?.quizStartTime ||
@@ -586,16 +586,14 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         details?.FromTime ||
         rawDetails?.startTime ||
         rawDetails?.StartTime ||
-        rawDetails?.quizStartTime ||
-        rawDetails?.QuizStartTime ||
-        rawSettings?.startTime ||
-        rawSettings?.StartTime ||
         data?.startTime ||
         data?.StartTime ||
         (startDate && startDate.includes('T') ? startDate.split('T')[1]?.substring(0, 5) : '') ||
-        '10:00';
+        '';
 
     const endDate =
+        firstAvail?.endDate ||
+        firstAvail?.EndDate ||
         details?.endDate ||
         details?.EndDate ||
         details?.endDateTime ||
@@ -604,28 +602,15 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         details?.QuizEndDate ||
         details?.toDate ||
         details?.ToDate ||
-        details?.quizToDate ||
-        details?.QuizToDate ||
-        details?.activeTo ||
-        details?.ActiveTo ||
         rawDetails?.endDate ||
         rawDetails?.EndDate ||
-        rawDetails?.endDateTime ||
-        rawDetails?.EndDateTime ||
-        rawDetails?.quizEndDate ||
-        rawDetails?.QuizEndDate ||
-        rawDetails?.toDate ||
-        rawDetails?.ToDate ||
-        rawSettings?.endDate ||
-        rawSettings?.EndDate ||
-        rawSettings?.endDateTime ||
-        rawSettings?.EndDateTime ||
         data?.endDate ||
         data?.EndDate ||
-        dueDate ||
         '';
 
     const endTime =
+        firstAvail?.endTime ||
+        firstAvail?.EndTime ||
         details?.endTime ||
         details?.EndTime ||
         details?.quizEndTime ||
@@ -634,14 +619,101 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         details?.ToTime ||
         rawDetails?.endTime ||
         rawDetails?.EndTime ||
-        rawDetails?.quizEndTime ||
-        rawDetails?.QuizEndTime ||
-        rawSettings?.endTime ||
-        rawSettings?.EndTime ||
         data?.endTime ||
         data?.EndTime ||
         (endDate && endDate.includes('T') ? endDate.split('T')[1]?.substring(0, 5) : '') ||
-        '18:00';
+        '';
+
+    const isAsynchronous = Boolean(
+        firstTimeLimit?.isAsynchronous ??
+        firstTimeLimit?.IsAsynchronous ??
+        details?.isAsynchronous ??
+        details?.IsAsynchronous ??
+        data?.isAsynchronous ??
+        data?.IsAsynchronous ??
+        true
+    );
+
+    const isSynchronous = Boolean(
+        firstTimeLimit?.isSynchronous ??
+        firstTimeLimit?.IsSynchronous ??
+        details?.isSynchronous ??
+        details?.IsSynchronous ??
+        data?.isSynchronous ??
+        data?.IsSynchronous ??
+        false
+    );
+
+    const timeLimitExpiryActionId = String(
+        firstTimeLimit?.timeLimitExpiryActionId ??
+        firstTimeLimit?.TimeLimitExpiryActionId ??
+        details?.timeLimitExpiryActionId ??
+        details?.TimeLimitExpiryActionId ??
+        'autoSubmit'
+    );
+
+    const timeLimitMinutes = Number(
+        firstTimeLimit?.timeLimitMinutes ??
+        firstTimeLimit?.TimeLimitMinutes ??
+        details?.timeLimitMinutes ??
+        details?.TimeLimitMinutes ??
+        data?.timeLimitMinutes ??
+        data?.TimeLimitMinutes ??
+        120
+    );
+
+    const gradeOutOf = Number(
+        rawBasic?.gradeOutOf ??
+        rawBasic?.GradeOutOf ??
+        details?.gradeOutOf ??
+        details?.GradeOutOf ??
+        data?.gradeOutOf ??
+        data?.GradeOutOf ??
+        0
+    );
+
+    const totalQuestionsGradeOutOf = Number(
+        rawBasic?.totalQuestionsGradeOutOf ??
+        rawBasic?.TotalQuestionsGradeOutOf ??
+        details?.totalQuestionsGradeOutOf ??
+        details?.TotalQuestionsGradeOutOf ??
+        data?.totalQuestionsGradeOutOf ??
+        data?.TotalQuestionsGradeOutOf ??
+        gradeOutOf
+    );
+
+    const gradeBook =
+        rawBasic?.gradeBook ||
+        rawBasic?.GradeBook ||
+        details?.gradeBook ||
+        details?.GradeBook ||
+        data?.gradeBook ||
+        data?.GradeBook ||
+        'Not in Grade Book';
+
+    const syncToGradeBook = Boolean(
+        details?.syncToGradeBook ??
+        details?.SyncToGradeBook ??
+        data?.syncToGradeBook ??
+        data?.SyncToGradeBook ??
+        (gradeBook === 'In Grade Book')
+    );
+
+    const passingGradePercentage = Number(
+        details?.passingGradePercentage ??
+        details?.PassingGradePercentage ??
+        data?.passingGradePercentage ??
+        data?.PassingGradePercentage ??
+        60
+    );
+
+    const preventPreviousBackNavigation = Boolean(
+        details?.preventPreviousBackNavigation ??
+        details?.PreventPreviousBackNavigation ??
+        data?.preventPreviousBackNavigation ??
+        data?.PreventPreviousBackNavigation ??
+        false
+    );
 
     const attemptsAllowed = Number(
         rawSettings?.attemptsAllowed ??
@@ -722,18 +794,30 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         ModuleName: moduleName,
         microcredentialModuleName: moduleName,
         MicrocredentialModuleName: moduleName,
-        gradeOutOf: details?.gradeOutOf ?? details?.GradeOutOf ?? 10,
+        gradeOutOf,
+        GradeOutOf: gradeOutOf,
+        totalQuestionsGradeOutOf,
+        TotalQuestionsGradeOutOf: totalQuestionsGradeOutOf,
         dueDate,
         DueDate: dueDate,
-        gradeBook: details?.gradeBook || details?.GradeBook || 'In Grade Book',
+        gradeBook,
+        GradeBook: gradeBook,
         yearRange: details?.yearRange || details?.YearRange || '',
         isActive: Boolean(details?.isActive ?? details?.IsActive ?? true),
         hasTimeLimit: Boolean(details?.hasTimeLimit ?? details?.HasTimeLimit ?? true),
-        timeLimitMinutes: details?.timeLimitMinutes ?? details?.TimeLimitMinutes ?? 120,
+        timeLimitMinutes,
+        TimeLimitMinutes: timeLimitMinutes,
+        isAsynchronous,
+        IsAsynchronous: isAsynchronous,
+        isSynchronous,
+        IsSynchronous: isSynchronous,
+        timeLimitExpiryActionId,
+        TimeLimitExpiryActionId: timeLimitExpiryActionId,
         questionsPerPageId: details?.questionsPerPageId ?? details?.QuestionsPerPageId ?? 1,
-        preventPreviousBackNavigation: Boolean(details?.preventPreviousBackNavigation ?? details?.PreventPreviousBackNavigation ?? true),
+        preventPreviousBackNavigation,
+        PreventPreviousBackNavigation: preventPreviousBackNavigation,
         shuffleQuestionsAndSections: Boolean(details?.shuffleQuestionsAndSections ?? details?.ShuffleQuestionsAndSections ?? false),
-        allowHints: Boolean(details?.allowHints ?? details?.AllowHints ?? true),
+        allowHints: Boolean(details?.allowHints ?? details?.AllowHints ?? false),
         disableInternalMessages: Boolean(details?.disableInternalMessages ?? details?.DisableInternalMessages ?? false),
         headerDescription: details?.headerDescription || details?.HeaderDescription || '',
         footerDescription: details?.footerDescription || details?.FooterDescription || '',
@@ -754,11 +838,14 @@ export function parseGetDegreeQuizDetailsByQuizIdOutput(rawJson = {}, status = 2
         AttemptsTry: attemptsAllowed,
         noOfAttempts: attemptsAllowed,
         NoOfAttempts: attemptsAllowed,
+        passingGradePercentage,
+        PassingGradePercentage: passingGradePercentage,
         categoryId: details?.categoryId ?? details?.CategoryId ?? 1,
         deductPoints: Boolean(details?.deductPoints ?? details?.DeductPoints ?? false),
         deductionInPercentage: details?.deductionInPercentage ?? details?.DeductionInPercentage ?? 0,
         autoPublishResults: Boolean(details?.autoPublishResults ?? details?.AutoPublishResults ?? true),
-        syncToGradeBook: Boolean(details?.syncToGradeBook ?? details?.SyncToGradeBook ?? true),
+        syncToGradeBook,
+        SyncToGradeBook: syncToGradeBook,
         rawDetails: details
     } : null;
 

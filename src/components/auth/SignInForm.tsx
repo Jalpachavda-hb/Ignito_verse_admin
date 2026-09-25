@@ -77,7 +77,7 @@ export default function SignInForm() {
       {/* Top Header: Back to Website */}
       <div className="flex justify-end mb-3">
         <a
-          href="https://ignitoverse.com"
+          href="https://captiq.ignitolearn.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"

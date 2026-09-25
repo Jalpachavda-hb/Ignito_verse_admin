@@ -264,24 +264,17 @@ export default function MicrocredentialQuizList() {
       const payload = {
         pageNo: currentPage,
         pageSize: pageSize,
-        orderByColumn: sortConfig.key,
-        orderByDirection: sortConfig.direction,
+        orderByColumn: sortConfig.key || "UpdatedOn",
+        orderByDirection: sortConfig.direction || "DESC",
         totalRecords: 0,
         searchInput: searchQuery.trim(),
         educationTypeId: 2, // Microcredential
         quizTitle: filterTitle.trim(),
         streamId: filterStreamId || 0,
-        StreamId: filterStreamId || 0,
         stream: filterStream.trim(),
-        courseId: filterCourseId || 0,
-        CourseId: filterCourseId || 0,
         microcredentialCourseId: filterCourseId || 0,
-        MicrocredentialCourseId: filterCourseId || 0,
         microcredentialName: filterMicrocredential.trim(),
         microcredentialModuleMasterId: filterModuleId || 0,
-        MicrocredentialModuleMasterId: filterModuleId || 0,
-        moduleMasterId: filterModuleId || 0,
-        ModuleMasterId: filterModuleId || 0,
         quizCreaterName: filterCreater.trim(),
         dueDate: filterDueDate
       };

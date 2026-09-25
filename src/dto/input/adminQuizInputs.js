@@ -3,6 +3,10 @@
  * Builds strongly-typed payload objects and headers for .NET Web API endpoints.
  */
 
+import { buildMainDegreeQuizListInput as buildMainDegreeQuizListInputInternal } from './mainDegreeQuizListInput.js';
+import { buildFinalizeDegreeQuizAddUpdateInput as buildFinalizeDegreeQuizAddUpdateInputInternal } from './finalizeDegreeQuizAddUpdateInput.js';
+import { buildDegreeQuizMasterAddUpdateInput as buildDegreeQuizMasterAddUpdateInputInternal } from './degreeQuizMasterAddUpdateInput.js';
+
 /**
  * Normalizes an argument that can be either an options object or the first positional argument.
  */
@@ -23,83 +27,10 @@ function normalizeOptions(firstArg, ...args) {
  */
 export function buildMainDegreeQuizListInput(params = {}) {
     const opts = normalizeOptions(params) || { pageNo: params };
-    const {
-        pageNo = 1,
-        pageSize = 10,
-        orderByColumn = 'UpdatedOn',
-        orderByDirection = 'DESC',
-        totalRecords = 0,
-        searchInput = '',
-        educationTypeId = 2, // 2 = Microcredential
-        quizTitle = '',
-        stream = '',
-        microcredentialName = '',
-        quizCreaterName = '',
-        dueDate = '',
-        adminId = 0,
-        microcredentialCourseId = 0,
-        microcredentialModuleMasterId = 0
-    } = opts;
-
-    const cleanStreamId = Number(opts.streamId ?? opts.StreamId ?? 0);
-    const cleanCourseId = Number(
-        microcredentialCourseId ||
-        opts.MicrocredentialCourseId ||
-        opts.courseId ||
-        opts.CourseId ||
-        opts.courseDetailsId ||
-        opts.CourseDetailsId ||
-        0
-    );
-    const cleanModuleId = Number(
-        microcredentialModuleMasterId ||
-        opts.MicrocredentialModuleMasterId ||
-        opts.moduleMasterId ||
-        opts.ModuleMasterId ||
-        opts.moduleId ||
-        opts.ModuleId ||
-        0
-    );
-
-    return {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            pageNo: Number(pageNo) || 1,
-            pageSize: Number(pageSize) || 10,
-            orderByColumn: orderByColumn || 'UpdatedOn',
-            orderByDirection: orderByDirection || 'DESC',
-            totalRecords: Number(totalRecords) || 0,
-            searchInput: searchInput || '',
-            educationTypeId: Number(educationTypeId) || 2,
-            quizTitle: quizTitle || '',
-            StreamId: cleanStreamId,
-            streamId: cleanStreamId,
-            stream: stream || '',
-            Stream: stream || '',
-            microcredentialName: microcredentialName || '',
-            MicrocredentialName: microcredentialName || '',
-            quizCreaterName: quizCreaterName || '',
-            dueDate: dueDate || '',
-            adminId: Number(adminId) || 0,
-            AdminId: Number(adminId) || 0,
-            MicrocredentialCourseId: cleanCourseId,
-            microcredentialCourseId: cleanCourseId,
-            CourseId: cleanCourseId,
-            courseId: cleanCourseId,
-            CourseDetailsId: cleanCourseId,
-            courseDetailsId: cleanCourseId,
-            MicrocredentialModuleMasterId: cleanModuleId,
-            microcredentialModuleMasterId: cleanModuleId,
-            ModuleMasterId: cleanModuleId,
-            moduleMasterId: cleanModuleId,
-            ModuleId: cleanModuleId,
-            moduleId: cleanModuleId
-        })
-    };
+    return buildMainDegreeQuizListInputInternal(opts);
 }
+
+export const mainDegreeQuizListInput = buildMainDegreeQuizListInput;
 
 /**
  * 1.2 Toggle Quiz Active / Inactive Status Input
@@ -118,11 +49,8 @@ export function buildActiveInactiveDegreeQuizInput(quizId = 0, isActive = false,
         },
         body: JSON.stringify({
             QuizId: cleanQuizId,
-            quizId: cleanQuizId,
             IsActive: cleanIsActive,
-            isActive: cleanIsActive,
-            AdminId: cleanAdminId,
-            adminId: cleanAdminId
+            AdminId: cleanAdminId
         })
     };
 }
@@ -143,9 +71,7 @@ export function buildDeleteDegreeQuizByQuizIdInput(quizId = 0, adminId = 0) {
         },
         body: JSON.stringify({
             QuizId: cleanQuizId,
-            quizId: cleanQuizId,
-            AdminId: cleanAdminId,
-            adminId: cleanAdminId
+            AdminId: cleanAdminId
         })
     };
 }
@@ -194,142 +120,10 @@ export function buildGetStreamByProgrammeInput(streamId = 0) {
  */
 export function buildDegreeQuizMasterAddUpdateInput(params = {}) {
     const opts = normalizeOptions(params) || {};
-    const quizId = Number(opts.quizId ?? opts.QuizId ?? 0);
-    const quizTitle = String(opts.quizTitle ?? opts.QuizTitle ?? '');
-    const gradeOutOf = Number(opts.gradeOutOf ?? opts.GradeOutOf ?? 100);
-    const dueDate = String(opts.dueDate ?? opts.DueDate ?? '');
-    const quizDescription = String(opts.quizDescription ?? opts.QuizDescription ?? '');
-    const educationTypeId = Number(opts.educationTypeId ?? opts.EducationTypeId ?? 2);
-    const streamId = Number(opts.streamId ?? opts.StreamId ?? 0);
-    const programId = Number(opts.programId ?? opts.ProgramId ?? 0);
-    const semesterId = Number(opts.semesterId ?? opts.SemesterId ?? 0);
-
-    // Resolve course identifier across all possible database naming conventions
-    const resolvedCourseId = Number(
-        opts.courseId ??
-        opts.CourseId ??
-        opts.courseDetailsId ??
-        opts.CourseDetailsId ??
-        opts.microcredentialCourseId ??
-        opts.MicrocredentialCourseId ??
-        opts.quizCourseId ??
-        opts.QuizCourseId ??
-        0
-    );
-
-    // Resolve module master identifier across all possible database naming conventions
-    const resolvedModuleId = Number(
-        opts.moduleMasterId ??
-        opts.ModuleMasterId ??
-        opts.microcredentialModuleMasterId ??
-        opts.MicrocredentialModuleMasterId ??
-        opts.moduleId ??
-        opts.ModuleId ??
-        0
-    );
-
-    const unitId = Number(opts.unitId ?? opts.UnitId ?? 0);
-    const gradeScheme = Number(opts.gradeScheme ?? opts.GradeScheme ?? 1);
-    const gradeBook = String(opts.gradeBook ?? opts.GradeBook ?? 'In Grade Book');
-    const yearRange = String(opts.yearRange ?? opts.YearRange ?? '');
-    const createdBy = Number(opts.createdBy ?? opts.CreatedBy ?? opts.adminId ?? opts.AdminId ?? 0);
-    const freeCourseId = Number(opts.freeCourseId ?? opts.FreeCourseId ?? 0);
-    const courseTypeId = Number(opts.courseTypeId ?? opts.CourseTypeId ?? 0);
-    const startDate = String(opts.startDate ?? opts.StartDate ?? opts.dueDate ?? opts.DueDate ?? '');
-    const endDate = String(opts.endDate ?? opts.EndDate ?? opts.dueDate ?? opts.DueDate ?? '');
-    const startTime = String(opts.startTime ?? opts.StartTime ?? '10:00');
-    const endTime = String(opts.endTime ?? opts.EndTime ?? '18:00');
-    const attemptsAllowed = Number(
-        opts.attemptTry ??
-        opts.AttemptTry ??
-        opts.attemptsTry ??
-        opts.AttemptsTry ??
-        opts.attemptsAllowed ??
-        opts.AttemptsAllowed ??
-        opts.noOfAttempts ??
-        opts.NoOfAttempts ??
-        opts.attemptsTry ??
-        opts.AttemptsTry ??
-        opts.attemptTry ??
-        opts.AttemptTry ??
-        opts.attempts ??
-        opts.Attempts ??
-        opts.totalAttempt ??
-        opts.TotalAttempt ??
-        1
-    );
-
-    return {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            QuizId: quizId,
-            quizId: quizId,
-            QuizTitle: quizTitle,
-            quizTitle: quizTitle,
-            GradeOutOf: gradeOutOf,
-            gradeOutOf: gradeOutOf,
-            DueDate: dueDate,
-            dueDate: dueDate,
-            QuizDescription: quizDescription,
-            quizDescription: quizDescription,
-            EducationTypeId: educationTypeId,
-            educationTypeId: educationTypeId,
-            StreamId: streamId,
-            streamId: streamId,
-            ProgramId: programId,
-            programId: programId,
-            SemesterId: semesterId,
-            semesterId: semesterId,
-            CourseDetailsId: resolvedCourseId,
-            courseDetailsId: resolvedCourseId,
-            CourseId: resolvedCourseId,
-            courseId: resolvedCourseId,
-            MicrocredentialCourseId: resolvedCourseId,
-            microcredentialCourseId: resolvedCourseId,
-            QuizCourseId: resolvedCourseId,
-            quizCourseId: resolvedCourseId,
-            ModuleMasterId: resolvedModuleId,
-            moduleMasterId: resolvedModuleId,
-            MicrocredentialModuleMasterId: resolvedModuleId,
-            microcredentialModuleMasterId: resolvedModuleId,
-            ModuleId: resolvedModuleId,
-            moduleId: resolvedModuleId,
-            UnitId: unitId,
-            unitId: unitId,
-            GradeScheme: gradeScheme,
-            gradeScheme: gradeScheme,
-            GradeBook: gradeBook,
-            gradeBook: gradeBook,
-            YearRange: yearRange,
-            yearRange: yearRange,
-            CreatedBy: createdBy,
-            createdBy: createdBy,
-            FreeCourseId: freeCourseId,
-            freeCourseId: freeCourseId,
-            CourseTypeId: courseTypeId,
-            courseTypeId: courseTypeId,
-            StartDate: startDate,
-            startDate: startDate,
-            EndDate: endDate,
-            endDate: endDate,
-            StartTime: startTime,
-            startTime: startTime,
-            EndTime: endTime,
-            endTime: endTime,
-            AttemptsAllowed: attemptsAllowed,
-            attemptsAllowed: attemptsAllowed,
-            AttemptTry: attemptsAllowed,
-            attemptTry: attemptsAllowed,
-            AttemptsTry: attemptsAllowed,
-            attemptsTry: attemptsAllowed,
-            NoOfAttempts: attemptsAllowed,
-            noOfAttempts: attemptsAllowed
-        })
-    };
+    return buildDegreeQuizMasterAddUpdateInputInternal(opts);
 }
+
+export const degreeQuizMasterAddUpdateInput = buildDegreeQuizMasterAddUpdateInput;
 
 /**
  * 2.5B Get Degree Quiz Details By Quiz ID Input
@@ -355,91 +149,10 @@ export function buildGetDegreeQuizDetailsByQuizIdInput(quizId = 0) {
  */
 export function buildFinalizeDegreeQuizAddUpdateInput(params = {}) {
     const opts = normalizeOptions(params) || {};
-    const cleanAdminId = Number(opts.adminId ?? opts.AdminId ?? 0);
-    const cleanQuizId = Number(opts.quizId ?? opts.QuizId ?? 0);
-
-    return {
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            quizId: cleanQuizId,
-            startDate: String(opts.startDate ?? opts.StartDate ?? ''),
-            startTime: String(opts.startTime ?? opts.StartTime ?? ''),
-            endDate: String(opts.endDate ?? opts.EndDate ?? ''),
-            endTime: String(opts.endTime ?? opts.EndTime ?? ''),
-            password: String(opts.password ?? opts.Password ?? ''),
-            adminId: cleanAdminId,
-            allowSelectedUsersAccess: Boolean(opts.allowSelectedUsersAccess ?? opts.AllowSelectedUsersAccess ?? true),
-            allowOnlySpecialAccessUsers: Boolean(opts.allowOnlySpecialAccessUsers ?? opts.AllowOnlySpecialAccessUsers ?? false),
-            hasTimeLimit: Boolean(opts.hasTimeLimit ?? opts.HasTimeLimit ?? false),
-            questionsPerPageId: Number(opts.questionsPerPageId ?? opts.QuestionsPerPageId ?? 0),
-            preventPreviousBackNavigation: Boolean(opts.preventPreviousBackNavigation ?? opts.PreventPreviousBackNavigation ?? false),
-            shuffleQuestionsAndSections: Boolean(opts.shuffleQuestionsAndSections ?? opts.ShuffleQuestionsAndSections ?? false),
-            allowHints: Boolean(opts.allowHints ?? opts.AllowHints ?? true),
-            disableInternalMessages: Boolean(opts.disableInternalMessages ?? opts.DisableInternalMessages ?? false),
-            headerDescription: String(opts.headerDescription ?? opts.HeaderDescription ?? ''),
-            footerDescription: String(opts.footerDescription ?? opts.FooterDescription ?? ''),
-            timeLimitMinutes: Number(opts.timeLimitMinutes ?? opts.TimeLimitMinutes ?? 0),
-            isAsynchronous: Boolean(opts.isAsynchronous ?? opts.IsAsynchronous ?? true),
-            isSynchronous: Boolean(opts.isSynchronous ?? opts.IsSynchronous ?? false),
-            timeLimitDisplayStartDate: String(opts.timeLimitDisplayStartDate ?? opts.TimeLimitDisplayStartDate ?? ''),
-            timeLimitDisplayEndDate: String(opts.timeLimitDisplayEndDate ?? opts.TimeLimitDisplayEndDate ?? ''),
-            timeLimitExpiryActionId: Number(opts.timeLimitExpiryActionId ?? opts.TimeLimitExpiryActionId ?? 0),
-            attemptsAllowed: Number(opts.attemptsAllowed ?? opts.AttemptsAllowed ?? opts.attemptTry ?? opts.AttemptTry ?? opts.noOfAttempts ?? opts.NoOfAttempts ?? 0),
-            overallGradeCalculationId: Number(opts.overallGradeCalculationId ?? opts.OverallGradeCalculationId ?? 0),
-            allowRetryOnlyIncorrectAnswers: Boolean(opts.allowRetryOnlyIncorrectAnswers ?? opts.AllowRetryOnlyIncorrectAnswers ?? false),
-            categoryId: Number(opts.categoryId ?? opts.CategoryId ?? 0),
-            notificationEmail: String(opts.notificationEmail ?? opts.NotificationEmail ?? ''),
-            autoCompletionTypeId: String(opts.autoCompletionTypeId ?? opts.AutoCompletionTypeId ?? ''),
-            passingGradePercentage: Number(opts.passingGradePercentage ?? opts.PassingGradePercentage ?? 0),
-            deductPoints: Boolean(opts.deductPoints ?? opts.DeductPoints ?? false),
-            deductionInPercentage: Number(opts.deductionInPercentage ?? opts.DeductionInPercentage ?? 0),
-            autoPublishResults: Boolean(opts.autoPublishResults ?? opts.AutoPublishResults ?? true),
-            syncToGradeBook: Boolean(opts.syncToGradeBook ?? opts.SyncToGradeBook ?? true),
-            isAttemptGrade: Boolean(opts.isAttemptGrade ?? opts.IsAttemptGrade ?? false),
-            showQuestionsId: Number(opts.showQuestionsId ?? opts.ShowQuestionsId ?? 0),
-            customizeDate: String(opts.customizeDate ?? opts.CustomizeDate ?? ''),
-            customizeTimeLimit: String(opts.customizeTimeLimit ?? opts.CustomizeTimeLimit ?? ''),
-            timeLimitCheckbox: Boolean(opts.timeLimitCheckbox ?? opts.TimeLimitCheckbox ?? false),
-            minutesInTimeLimit: Number(opts.minutesInTimeLimit ?? opts.MinutesInTimeLimit ?? 0),
-            customeMessageInModel: String(opts.customeMessageInModel ?? opts.CustomeMessageInModel ?? ''),
-            dislayAttemptInModel: Boolean(opts.dislayAttemptInModel ?? opts.DislayAttemptInModel ?? false),
-            displayClassAverageInModel: Boolean(opts.displayClassAverageInModel ?? opts.DisplayClassAverageInModel ?? false),
-            displayGradeDistributionInModel: Boolean(opts.displayGradeDistributionInModel ?? opts.DisplayGradeDistributionInModel ?? false),
-            dropOne: Number(opts.dropOne ?? opts.DropOne ?? 0),
-            twoCheck1: Boolean(opts.twoCheck1 ?? opts.TwoCheck1 ?? false),
-            twoCheck2: Boolean(opts.twoCheck2 ?? opts.TwoCheck2 ?? false),
-            twoCheck3: Boolean(opts.twoCheck3 ?? opts.TwoCheck3 ?? false),
-            twoCheck4: Boolean(opts.twoCheck4 ?? opts.TwoCheck4 ?? false),
-            threeCheck1: Boolean(opts.threeCheck1 ?? opts.ThreeCheck1 ?? false),
-            threeCheck2: Boolean(opts.threeCheck2 ?? opts.ThreeCheck2 ?? false),
-            threeCheck3: Boolean(opts.threeCheck3 ?? opts.ThreeCheck3 ?? false),
-            fourCheck1: Boolean(opts.fourCheck1 ?? opts.FourCheck1 ?? false),
-            fourCheck2: Boolean(opts.fourCheck2 ?? opts.FourCheck2 ?? false),
-            fourCheck3: Boolean(opts.fourCheck3 ?? opts.FourCheck3 ?? false),
-            releaseConditionData: Array.isArray(opts.releaseConditionData ?? opts.ReleaseConditionData)
-                ? (opts.releaseConditionData ?? opts.ReleaseConditionData)
-                : [],
-            ipRestrictionsList: Array.isArray(opts.ipRestrictionsList ?? opts.IPRestrictionsList)
-                ? (opts.ipRestrictionsList ?? opts.IPRestrictionsList)
-                : [],
-            specialAccessToUsersList: Array.isArray(opts.specialAccessToUsersList ?? opts.SpecialAccessToUsersList)
-                ? (opts.specialAccessToUsersList ?? opts.SpecialAccessToUsersList)
-                : [],
-            specialUserAttemptData: Array.isArray(opts.specialUserAttemptData ?? opts.SpecialUserAttemptData)
-                ? (opts.specialUserAttemptData ?? opts.SpecialUserAttemptData)
-                : [],
-            specialAccessUserData: Array.isArray(opts.specialAccessUserData ?? opts.SpecialAccessUserData)
-                ? (opts.specialAccessUserData ?? opts.SpecialAccessUserData)
-                : [],
-            attemptConditionData: Array.isArray(opts.attemptConditionData ?? opts.AttemptConditionData)
-                ? (opts.attemptConditionData ?? opts.AttemptConditionData)
-                : []
-        })
-    };
+    return buildFinalizeDegreeQuizAddUpdateInputInternal(opts);
 }
+
+export const finalizeDegreeQuizAddUpdateInput = buildFinalizeDegreeQuizAddUpdateInput;
 
 /**
  * 2.7 Get Questions List for Quiz Input

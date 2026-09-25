@@ -385,15 +385,14 @@ export const getMicrocredentialCourse = getMicrocredentialCoursesByStream;
  * 2.5 Add / Update Quiz Master (Step 1)
  * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizMasterAddUpdate
  *
- * @param {object} params - Quiz Master data:
- *   { QuizId, QuizTitle, GradeOutOf, DueDate, QuizDescription, EducationTypeId, StreamId, ProgramId,
- *     SemesterId, CourseDetailsId, UnitId, GradeScheme, GradeBook, YearRange, CreatedBy, MicrocredentialCourseId }
+ * @param {object} params - Quiz Master form data or input DTO
  * @returns {Promise<object>} Result containing quizId and status message
  */
 export async function saveDegreeQuizMaster(params = {}) {
     try {
-        const createdBy = resolveAdminId(params.createdBy ?? params.CreatedBy ?? params.adminId ?? params.AdminId);
-        const inputDto = buildDegreeQuizMasterAddUpdateInput({ ...params, createdBy });
+        const inputDto = (params && params.body && params.headers)
+            ? params
+            : buildDegreeQuizMasterAddUpdateInput(params);
 
         const response = await apiClient('api/DegreeQuizAPI/DegreeQuizMasterAddUpdate', {
             method: 'POST',
@@ -447,13 +446,15 @@ export async function getDegreeQuizDetailsByQuizId(quizIdOrParams) {
  * 2.6 Finalize Quiz & Save Settings (Save & Close)
  * Endpoint: POST /api/DegreeQuizAPI/FinalizeDegreeQuizAddUpdate
  *
- * @param {object} params - Complete quiz availability, timing, IP restrictions, evaluation settings
+ * @param {object} params - Complete quiz availability, timing, IP restrictions, evaluation settings or input DTO
  * @returns {Promise<object>} Result containing fcm tokens and status message
  */
 export async function finalizeDegreeQuiz(params = {}) {
     try {
-        const adminId = resolveAdminId(params.adminId ?? params.AdminId);
-        const inputDto = buildFinalizeDegreeQuizAddUpdateInput({ ...params, adminId });
+        const adminId = resolveAdminId(params?.adminId ?? params?.AdminId);
+        const inputDto = (params && params.body && params.headers)
+            ? params
+            : buildFinalizeDegreeQuizAddUpdateInput({ ...params, adminId });
 
         const response = await apiClient('api/DegreeQuizAPI/FinalizeDegreeQuizAddUpdate', {
             method: 'POST',
@@ -1092,6 +1093,7 @@ const AdminQuizPageService = {
 };
 
 export { getMicrocredentialModuleByCourseId };
+export { buildDegreeQuizMasterAddUpdateInput, buildFinalizeDegreeQuizAddUpdateInput };
 export * from './microcredentialQuizResultService';
 
 export default AdminQuizPageService;

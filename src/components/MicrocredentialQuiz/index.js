@@ -4,9 +4,6 @@ export { default as MicrocredentialQuizResult } from './MicrocredentialQuizResul
 export { default as MicrocredentialCheckpointQuizReport } from './MicrocredentialCheckpointQuizReport';
 export { default as QuizPreviewView } from './QuizPreviewView';
 export { default as AddEditMicrocredentialQuiz } from './AddEditMicrocredentialQuiz';
-export { default as AddMicrocredentialQuiz } from './AddEditMicrocredentialQuiz';
-export { default as EditMicrocredentialQuiz } from './AddEditMicrocredentialQuiz';
-export { default as AddEditQuizModal } from './AddEditQuizModal';
 export { default as StudentQuizResponseModal } from './StudentQuizResponseModal';
 export { default as QuestionMasterModal } from './QuestionMasterModal';
 export { default as MicrocredentialQuizQuestionsPage } from './MicrocredentialQuizQuestionsPage';
