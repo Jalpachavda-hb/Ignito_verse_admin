@@ -407,12 +407,8 @@ export default function ModuleTopicDetailList() {
                 <TableCell isHeader className="w-36 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                   Document / PDF
                 </TableCell>
-                <TableCell isHeader className="w-40 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Duration / Time
-                </TableCell>
-                <TableCell isHeader className="w-28 px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Actions
-                </TableCell>
+             
+              
               </TableRow>
             </TableHeader>
 
@@ -489,61 +485,11 @@ export default function ModuleTopicDetailList() {
                         )}
                       </TableCell>
 
-                      {/* 5. Start Time / End Time */}
-                      <TableCell className="px-4 py-4 text-center text-xs text-gray-600 dark:text-gray-400">
-                        {item.videoStartTime || item.videoEndTime ? (
-                          <span>
-                            {item.videoStartTime || "00:00"} - {item.videoEndTime || "End"}
-                          </span>
-                        ) : (
-                          <span>—</span>
-                        )}
-                      </TableCell>
+                 
+                      
 
-                      {/* 6. Actions */}
-                      <TableCell className="px-4 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {hasVideo && (
-                            <button
-                              type="button"
-                              onClick={() => handleCopyText(item.topicVideoUrl, "Video URL")}
-                              className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 cursor-pointer"
-                              title="Copy Video URL"
-                            >
-                              <CopyIcon className="size-3.5" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/microcredential/topic-edit/${effectiveCourseId || 0}`, {
-                                state: {
-                                  courseId: effectiveCourseId,
-                                  courseName,
-                                  streamId,
-                                  streamName,
-                                  moduleId,
-                                  moduleName,
-                                  isCourseLocked: true,
-                                  isModuleLocked: true,
-                                },
-                              })
-                            }
-                            className="rounded-lg p-1.5 text-purple-600 hover:bg-purple-50 hover:text-purple-800 dark:text-purple-400 dark:hover:bg-purple-950/40 cursor-pointer"
-                            title="Edit Module Topics"
-                          >
-                            <PencilIcon className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteModalItem(item)}
-                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 cursor-pointer"
-                            title="Delete Topic"
-                          >
-                            <TrashBinIcon className="size-3.5" />
-                          </button>
-                        </div>
-                      </TableCell>
+                   
+                     
                     </TableRow>
                   );
                 })

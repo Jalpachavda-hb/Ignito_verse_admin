@@ -52,7 +52,7 @@ const navItems: NavItem[] = [
     icon: <BookOpenIcon className="w-5 h-5" />,
   },
   {
-    name: "Microcredential Module List",
+    name: "Microcredential Module List By Course",
     path: "/microcredential/module-list",
     icon: <FolderMenuIcon className="w-5 h-5" />,
   },

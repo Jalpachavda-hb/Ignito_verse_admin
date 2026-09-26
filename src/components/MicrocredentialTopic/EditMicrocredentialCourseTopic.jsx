@@ -129,9 +129,11 @@ export default function EditMicrocredentialCourseTopic() {
   // Student Download Documents: [{ id, originalFileName, givenFileName, filePath, file, uploading, previewUrl }]
   const [studentDocs, setStudentDocs] = useState([]);
 
-  // Topics list: [{ topicName, videoTitle, topicVideoUrl, topicPdf, pdfFile }]
+  // Topics list: [{ microcredentialCourseTopicId, microCourseTopicId, topicName, videoTitle, topicVideoUrl, topicPdf, pdfFile }]
   const [topics, setTopics] = useState([
     {
+      microcredentialCourseTopicId: 0,
+      microCourseTopicId: 0,
       topicName: "",
       videoTitle: "",
       topicVideoUrl: "",
@@ -140,7 +142,23 @@ export default function EditMicrocredentialCourseTopic() {
     },
   ]);
 
+  // Track deleted existing topic DB IDs to be deleted when Update is clicked
+  const [deletedTopicIds, setDeletedTopicIds] = useState([]);
+  const [topicToRemove, setTopicToRemove] = useState(null);
+
   const excelInputRef = useRef(null);
+
+  // Prevent background scrolling when remove confirmation modal is open
+  useEffect(() => {
+    if (topicToRemove) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [topicToRemove]);
 
   // Load topics specifically by Module ID via GetMicrocredentialTopicByModuleId
   const loadTopicsForModule = async (moduleIdToLoad) => {
@@ -151,33 +169,47 @@ export default function EditMicrocredentialCourseTopic() {
         const rawTopics = topicRes.microcredentialTopicList || [];
         if (Array.isArray(rawTopics) && rawTopics.length > 0) {
           setTopics(
-            rawTopics.map((t) => ({
-              microCourseTopicId: t.microCourseTopicId,
-              topicName:
-                t.topicName ||
-                t.TopicName ||
-                "",
-              videoTitle:
-                t.videoTitle ||
-                t.VideoTitle ||
-                "",
-              topicVideoUrl:
-                t.topicVideoUrl ||
-                t.TopicVideoUrl ||
-                t.videoUrl ||
-                t.watchVideoURL ||
-                "",
-              topicPdf:
-                t.topicPdf ||
-                t.TopicPdf ||
-                t.topicDocument ||
-                "",
-              pdfFile: null,
-            }))
+            rawTopics.map((t) => {
+              const dbId = Number(
+                t.microCourseTopicId ||
+                t.MicroCourseTopicId ||
+                t.microcredentialCourseTopicId ||
+                t.MicrocredentialCourseTopicId ||
+                t.id ||
+                0
+              );
+              return {
+                microcredentialCourseTopicId: dbId,
+                microCourseTopicId: dbId,
+                topicName:
+                  t.topicName ||
+                  t.TopicName ||
+                  "",
+                videoTitle:
+                  t.videoTitle ||
+                  t.VideoTitle ||
+                  "",
+                topicVideoUrl:
+                  t.topicVideoUrl ||
+                  t.TopicVideoUrl ||
+                  t.videoUrl ||
+                  t.watchVideoURL ||
+                  "",
+                topicPdf:
+                  t.topicPdf ||
+                  t.TopicPdf ||
+                  t.topicDocument ||
+                  "",
+                pdfFile: null,
+              };
+            })
           );
+          setDeletedTopicIds([]);
         } else {
           setTopics([
             {
+              microcredentialCourseTopicId: 0,
+              microCourseTopicId: 0,
               topicName: "",
               videoTitle: "",
               topicVideoUrl: "",
@@ -185,6 +217,7 @@ export default function EditMicrocredentialCourseTopic() {
               pdfFile: null,
             },
           ]);
+          setDeletedTopicIds([]);
         }
         return topicRes;
       }
@@ -401,35 +434,48 @@ export default function EditMicrocredentialCourseTopic() {
 
         if (Array.isArray(rawTopics) && rawTopics.length > 0) {
           setTopics(
-            rawTopics.map((t) => ({
-              topicName:
-                t.topicName ||
-                t.TopicName ||
-                t.microcredentialTopicName ||
-                t.MicrocredentialTopicName ||
-                "",
-              videoTitle:
-                t.videoTitle ||
-                t.VideoTitle ||
-                t.videoName ||
-                "",
-              topicVideoUrl:
-                t.topicVideoUrl ||
-                t.TopicVideoUrl ||
-                t.videoURL ||
-                t.VideoURL ||
-                t.videoUrl ||
-                t.watchVideoURL ||
-                "",
-              topicPdf:
-                t.topicPdf ||
-                t.TopicPdf ||
-                t.topicDocument ||
-                t.topicPDF ||
-                "",
-              pdfFile: null,
-            }))
+            rawTopics.map((t) => {
+              const dbId = Number(
+                t.microcredentialCourseTopicId ||
+                t.MicrocredentialCourseTopicId ||
+                t.microCourseTopicId ||
+                t.MicroCourseTopicId ||
+                t.id ||
+                0
+              );
+              return {
+                microcredentialCourseTopicId: dbId,
+                microCourseTopicId: dbId,
+                topicName:
+                  t.topicName ||
+                  t.TopicName ||
+                  t.microcredentialTopicName ||
+                  t.MicrocredentialTopicName ||
+                  "",
+                videoTitle:
+                  t.videoTitle ||
+                  t.VideoTitle ||
+                  t.videoName ||
+                  "",
+                topicVideoUrl:
+                  t.topicVideoUrl ||
+                  t.TopicVideoUrl ||
+                  t.videoURL ||
+                  t.VideoURL ||
+                  t.videoUrl ||
+                  t.watchVideoURL ||
+                  "",
+                topicPdf:
+                  t.topicPdf ||
+                  t.TopicPdf ||
+                  t.topicDocument ||
+                  t.topicPDF ||
+                  "",
+                pdfFile: null,
+              };
+            })
           );
+          setDeletedTopicIds([]);
         }
 
         const rawStudentDocs =
@@ -515,6 +561,8 @@ export default function EditMicrocredentialCourseTopic() {
     setStudentDocs([]);
     setTopics([
       {
+        microcredentialCourseTopicId: 0,
+        microCourseTopicId: 0,
         topicName: "",
         videoTitle: "",
         topicVideoUrl: "",
@@ -522,6 +570,7 @@ export default function EditMicrocredentialCourseTopic() {
         pdfFile: null,
       },
     ]);
+    setDeletedTopicIds([]);
     if (streamId) {
       await loadCoursesForStream(streamId);
     } else {
@@ -613,6 +662,8 @@ export default function EditMicrocredentialCourseTopic() {
     setTopics((prev) => [
       ...prev,
       {
+        microcredentialCourseTopicId: 0,
+        microCourseTopicId: 0,
         topicName: "",
         videoTitle: "",
         topicVideoUrl: "",
@@ -622,11 +673,45 @@ export default function EditMicrocredentialCourseTopic() {
     ]);
   };
 
-  // Remove topic card
+  // Remove topic card handlers
   const handleRemoveTopic = (indexToRemove) => {
+    const topic = topics[indexToRemove];
+    const dbId = Number(topic?.microcredentialCourseTopicId || topic?.microCourseTopicId || 0);
+
+    // If it's an existing saved topic or has user-entered content, ask confirmation
+    if (dbId > 0 || (topic?.topicName && topic.topicName.trim() !== "")) {
+      setTopicToRemove({
+        index: indexToRemove,
+        dbId,
+        topicName: topic?.topicName || `Topic #${indexToRemove + 1}`,
+      });
+    } else {
+      performRemoveTopic(indexToRemove, 0);
+    }
+  };
+
+  const confirmRemoveTopic = () => {
+    if (!topicToRemove) return;
+    performRemoveTopic(topicToRemove.index, topicToRemove.dbId);
+    setTopicToRemove(null);
+  };
+
+  const performRemoveTopic = (indexToRemove, dbId) => {
+    // If it was an existing topic from DB, track in deletedTopicIds (avoid duplicates)
+    if (dbId > 0) {
+      setDeletedTopicIds((prev) => {
+        if (!prev.includes(dbId)) {
+          return [...prev, dbId];
+        }
+        return prev;
+      });
+    }
+
     if (topics.length === 1) {
       setTopics([
         {
+          microcredentialCourseTopicId: 0,
+          microCourseTopicId: 0,
           topicName: "",
           videoTitle: "",
           topicVideoUrl: "",
@@ -636,6 +721,7 @@ export default function EditMicrocredentialCourseTopic() {
       ]);
       return;
     }
+
     setTopics((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
@@ -927,31 +1013,16 @@ export default function EditMicrocredentialCourseTopic() {
 
           if (filePath) {
             finalStudentDocsList.push({
-              MicrocredentialStudentDownloadDocumentId: 0,
-              microcredentialStudentDownloadDocumentId: 0,
-              OriginalFileName: originalName,
-              GivenFileName: givenName,
-              MicrocredentialStudentDownloadDocument: filePath,
+              microcredentialStudentDownloadDocument: filePath,
               originalFileName: originalName,
               givenFileName: givenName,
-              microcredentialStudentDownloadDocument: filePath,
             });
           }
         } else if (doc.filePath) {
-          const existingDocId = doc.isExisting
-            ? Number(doc.documentId ?? doc.microcredentialStudentDownloadDocumentId ?? (typeof doc.id === "number" ? doc.id : 0) ?? 0)
-            : 0;
-          const validDocId = !isNaN(existingDocId) ? existingDocId : 0;
-
           finalStudentDocsList.push({
-            MicrocredentialStudentDownloadDocumentId: validDocId,
-            microcredentialStudentDownloadDocumentId: validDocId,
-            OriginalFileName: doc.originalFileName || "Document",
-            GivenFileName: doc.givenFileName || doc.originalFileName || "Document",
-            MicrocredentialStudentDownloadDocument: doc.filePath,
+            microcredentialStudentDownloadDocument: doc.filePath,
             originalFileName: doc.originalFileName || "Document",
             givenFileName: doc.givenFileName || doc.originalFileName || "Document",
-            microcredentialStudentDownloadDocument: doc.filePath,
           });
         }
       }
@@ -978,22 +1049,22 @@ export default function EditMicrocredentialCourseTopic() {
         }
 
         finalTopicsList.push({
-          TopicName: topic.topicName.trim(),
-          VideoTitle: topic.videoTitle.trim(),
-          TopicVideoUrl: topic.topicVideoUrl.trim(),
-          TopicPdf: topicPdfPath,
+          topicName: topic.topicName.trim(),
+          videoTitle: topic.videoTitle.trim(),
+          topicVideoUrl: topic.topicVideoUrl.trim(),
+          topicPdf: topicPdfPath,
         });
       }
 
-      // 3. API 5 Payload: MicroCourseTopicAddUpdate
+      // 3. API Payload: MicroCourseTopicAddUpdate (strictly matching Swagger schema)
       const payload = {
-        AdminId: 1,
-        MicrocredentialCourseId: Number(selectedCourseId),
-        MicrocredentialModuleMasterId: Number(selectedModuleId || 0),
-        StreamId: Number(selectedStreamId),
-        UploadMicroDocument: "",
-        MicrocredentialCourseTopicList: finalTopicsList,
-        MicrocredentialStudentDownloadDocumentList: finalStudentDocsList,
+        microcredentialCourseId: Number(selectedCourseId),
+        microcredentialModuleMasterId: Number(selectedModuleId || 0),
+        streamId: Number(selectedStreamId),
+        adminId: 1,
+        uploadMicroDocument: "",
+        microcredentialCourseTopicList: finalTopicsList,
+        microcredentialStudentDownloadDocumentList: finalStudentDocsList,
       };
 
       const res = await microCourseTopicAddUpdate(payload);
@@ -1001,6 +1072,7 @@ export default function EditMicrocredentialCourseTopic() {
       if (res && res.success !== false) {
         const msg = res.message || "Microcredential module topics updated successfully.";
         setSuccessMessage(msg);
+        setDeletedTopicIds([]);
 
         setTimeout(() => {
           if (selectedModuleId) {
@@ -1430,6 +1502,11 @@ export default function EditMicrocredentialCourseTopic() {
                     <span className="text-xs font-bold text-gray-800 dark:text-white">
                       Topic #{index + 1}
                     </span>
+                    {(topic.microcredentialCourseTopicId > 0 || topic.microCourseTopicId > 0) && (
+                      <span className="text-[10px] text-gray-400 font-normal">
+                        (ID: {topic.microcredentialCourseTopicId || topic.microCourseTopicId})
+                      </span>
+                    )}
                   </div>
 
                   {topics.length > 1 && (
@@ -1437,7 +1514,7 @@ export default function EditMicrocredentialCourseTopic() {
                       type="button"
                       onClick={() => handleRemoveTopic(index)}
                       disabled={saving}
-                      className="rounded-lg border border-red-200 bg-red-50/80 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300"
+                      className="rounded-lg border border-red-200 bg-red-50/80 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 active:scale-95 transition dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300 cursor-pointer"
                     >
                       Delete
                     </button>
@@ -1572,6 +1649,52 @@ export default function EditMicrocredentialCourseTopic() {
           </div>
         </form>
       </div>
+
+      {/* Remove Topic Confirmation Modal */}
+      {topicToRemove && (
+        <div className="fixed inset-0 z-99999 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-900">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="flex size-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40">
+                <TrashBinIcon className="size-5" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                Remove Topic?
+              </h3>
+            </div>
+
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to remove{" "}
+              <span className="font-semibold text-gray-800 dark:text-gray-200">
+                "{topicToRemove.topicName}"
+              </span>
+              ?
+              {topicToRemove.dbId > 0 && (
+                <span className="block mt-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  The topic will be removed from the database when you click Update.
+                </span>
+              )}
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setTopicToRemove(null)}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveTopic}
+                className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-red-700 transition cursor-pointer"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

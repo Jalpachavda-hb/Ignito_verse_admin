@@ -450,27 +450,7 @@ export default function CourseModuleDetailList() {
                           </button>
 
                           {/* Quick + Topic button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate("/microcredential/topic-add", {
-                                state: {
-                                  courseId,
-                                  courseName,
-                                  streamId,
-                                  streamName,
-                                  moduleId: item.microcredentialModuleMasterId,
-                                  moduleName: item.moduleName,
-                                  isCourseLocked: true,
-                                  isModuleLocked: true,
-                                },
-                              })
-                            }
-                            title="Add Topic to this Module"
-                            className="rounded-lg p-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors"
-                          >
-                            + Topic
-                          </button>
+                      
 
                           {/* Edit Module */}
                           <button
