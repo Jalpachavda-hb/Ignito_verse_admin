@@ -60,6 +60,18 @@ export default function MicrocredentialModuleList() {
     }
   }, [successMessage]);
 
+  // Update success notification on incoming location state
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      setSuccessMessage(location.state.successMessage);
+      window.history.replaceState({}, document.title);
+    }
+    if (location.state?.errorMessage) {
+      setErrorMessage(location.state.errorMessage);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   // Fetch Course List using adminMicrocredentialCourseList API
   const fetchCourses = useCallback(async () => {
     setLoading(true);

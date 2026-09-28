@@ -76,15 +76,17 @@ export default function CourseModuleDetailList() {
     }
   }, [errorMessage]);
 
-  // Show toast notification on mount if passed in location state
+  // Show notification banner if passed in location state
   useEffect(() => {
     if (location.state?.successMessage) {
-      showToast(location.state.successMessage, "success");
+      setSuccessMessage(location.state.successMessage);
+      window.history.replaceState({}, document.title);
     }
     if (location.state?.errorMessage) {
-      showToast(location.state.errorMessage, "error");
+      setErrorMessage(location.state.errorMessage);
+      window.history.replaceState({}, document.title);
     }
-  }, [location.state, showToast]);
+  }, [location.state]);
 
   // Fetch Modules for this specific Course using GetMicrocredentialModuleByCourseId API
   const fetchModules = useCallback(async (isManualRefresh = false) => {

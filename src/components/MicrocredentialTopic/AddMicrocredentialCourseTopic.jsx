@@ -20,9 +20,11 @@ import {
   getMicrocredentialModuleByCourseId,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { useToast } from "../../context/ToastContext";
 
 export default function AddMicrocredentialCourseTopic() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const location = useLocation();
 
   // Loading and feedback states
@@ -747,6 +749,7 @@ export default function AddMicrocredentialCourseTopic() {
       if (res && res.success !== false) {
         const msg = res.message || "Microcredential course topics added successfully.";
         setSuccessMessage(msg);
+        showToast(msg, "success");
 
         setTimeout(() => {
           if (selectedModuleId) {

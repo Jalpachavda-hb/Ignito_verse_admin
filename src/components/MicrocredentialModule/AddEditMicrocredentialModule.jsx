@@ -16,9 +16,11 @@ import {
   commonUploadFile,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { useToast } from "../../context/ToastContext";
 
 export default function AddEditMicrocredentialModule() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const location = useLocation();
   const params = useParams();
 
@@ -459,14 +461,30 @@ export default function AddEditMicrocredentialModule() {
       const res = await microcredentialModuleMasterAddUpdate(payload);
 
       if (res && res.success !== false) {
-        const msg = res.message || (isEditMode ? "Module updated successfully." : "Modules saved successfully.");
-        setSuccessMessage(msg);
+        const msg = isEditMode
+          ? "Module updated successfully."
+          : (res?.message || "Module added successfully.");
 
-        setTimeout(() => {
+        const targetCourseId = Number(selectedCourseId || passedCourseId || 0);
+        if (targetCourseId > 0) {
+          navigate(`/microcredential/course-modules/${targetCourseId}`, {
+            state: {
+              successMessage: msg,
+              courseId: targetCourseId,
+              courseName:
+                courseList.find((c) => String(c.microcredentialCourseId) === String(targetCourseId))?.microcredentialCourseName ||
+                passedCourseName,
+              streamId: selectedStreamId || passedStreamId,
+              streamName:
+                streamList.find((s) => String(s.streamId) === String(selectedStreamId))?.streamName ||
+                passedStreamName,
+            },
+          });
+        } else {
           navigate("/microcredential/module-list", {
             state: { successMessage: msg },
           });
-        }, 1200);
+        }
       } else {
         setErrorMessage(
           res?.message || "Failed to save module. Please verify your fields and retry."

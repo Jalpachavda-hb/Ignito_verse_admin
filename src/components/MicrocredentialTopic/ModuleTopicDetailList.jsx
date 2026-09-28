@@ -70,15 +70,17 @@ export default function ModuleTopicDetailList() {
 
   const { showToast } = useToast();
 
-  // Show toast notification on mount if passed in location state
+  // Show notification banner if passed in location state
   useEffect(() => {
     if (location.state?.successMessage) {
-      showToast(location.state.successMessage, "success");
+      setSuccessMessage(location.state.successMessage);
+      window.history.replaceState({}, document.title);
     }
     if (location.state?.errorMessage) {
-      showToast(location.state.errorMessage, "error");
+      setErrorMessage(location.state.errorMessage);
+      window.history.replaceState({}, document.title);
     }
-  }, [location.state, showToast]);
+  }, [location.state]);
 
   // Auto-dismiss inline notifications
   useEffect(() => {

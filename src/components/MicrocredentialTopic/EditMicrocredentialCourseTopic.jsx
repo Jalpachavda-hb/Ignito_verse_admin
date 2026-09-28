@@ -24,9 +24,11 @@ import {
   getMicrocredentialTopicByModuleId,
 } from "../../services/adminMicrocredentialService";
 import { formatImageUrl } from "../../dto/output/homepageOutputs";
+import { useToast } from "../../context/ToastContext";
 
 export default function EditMicrocredentialCourseTopic() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const location = useLocation();
   const params = useParams();
 
@@ -1012,17 +1014,29 @@ export default function EditMicrocredentialCourseTopic() {
           }
 
           if (filePath) {
+            const docIdNum = Number(doc.microcredentialStudentDownloadDocumentId || doc.documentId || doc.id || 0);
             finalStudentDocsList.push({
+              microcredentialStudentDownloadDocumentId: docIdNum,
+              MicrocredentialStudentDownloadDocumentId: docIdNum,
               microcredentialStudentDownloadDocument: filePath,
+              MicrocredentialStudentDownloadDocument: filePath,
               originalFileName: originalName,
+              OriginalFileName: originalName,
               givenFileName: givenName,
+              GivenFileName: givenName,
             });
           }
         } else if (doc.filePath) {
+          const docIdNum = Number(doc.microcredentialStudentDownloadDocumentId || doc.documentId || doc.id || 0);
           finalStudentDocsList.push({
+            microcredentialStudentDownloadDocumentId: docIdNum,
+            MicrocredentialStudentDownloadDocumentId: docIdNum,
             microcredentialStudentDownloadDocument: doc.filePath,
+            MicrocredentialStudentDownloadDocument: doc.filePath,
             originalFileName: doc.originalFileName || "Document",
+            OriginalFileName: doc.originalFileName || "Document",
             givenFileName: doc.givenFileName || doc.originalFileName || "Document",
+            GivenFileName: doc.givenFileName || doc.originalFileName || "Document",
           });
         }
       }
@@ -1048,60 +1062,79 @@ export default function EditMicrocredentialCourseTopic() {
           }
         }
 
+        const topicIdNum = Number(
+          topic.microcredentialCourseTopicId ||
+          topic.microCourseTopicId ||
+          topic.id ||
+          0
+        );
+
         finalTopicsList.push({
+          microcredentialCourseTopicId: topicIdNum,
+          MicrocredentialCourseTopicId: topicIdNum,
+          microCourseTopicId: topicIdNum,
+          MicroCourseTopicId: topicIdNum,
           topicName: topic.topicName.trim(),
+          TopicName: topic.topicName.trim(),
           videoTitle: topic.videoTitle.trim(),
+          VideoTitle: topic.videoTitle.trim(),
           topicVideoUrl: topic.topicVideoUrl.trim(),
+          TopicVideoUrl: topic.topicVideoUrl.trim(),
           topicPdf: topicPdfPath,
+          TopicPdf: topicPdfPath,
         });
       }
 
       // 3. API Payload: MicroCourseTopicAddUpdate (strictly matching Swagger schema)
       const payload = {
         microcredentialCourseId: Number(selectedCourseId),
+        MicrocredentialCourseId: Number(selectedCourseId),
         microcredentialModuleMasterId: Number(selectedModuleId || 0),
+        MicrocredentialModuleMasterId: Number(selectedModuleId || 0),
         streamId: Number(selectedStreamId),
+        StreamId: Number(selectedStreamId),
         adminId: 1,
+        AdminId: 1,
         uploadMicroDocument: "",
+        UploadMicroDocument: "",
         microcredentialCourseTopicList: finalTopicsList,
+        MicrocredentialCourseTopicList: finalTopicsList,
         microcredentialStudentDownloadDocumentList: finalStudentDocsList,
+        MicrocredentialStudentDownloadDocumentList: finalStudentDocsList,
       };
 
       const res = await microCourseTopicAddUpdate(payload);
 
       if (res && res.success !== false) {
-        const msg = res.message || "Microcredential module topics updated successfully.";
-        setSuccessMessage(msg);
+        const msg = "Microcredential module topics updated successfully.";
         setDeletedTopicIds([]);
 
-        setTimeout(() => {
-          if (selectedModuleId) {
-            navigate(`/microcredential/module-topics/${selectedModuleId}`, {
-              state: {
-                successMessage: msg,
-                courseId: selectedCourseId,
-                courseName:
-                  courseList.find((c) => String(c.microcredentialCourseId) === String(selectedCourseId))?.microcredentialCourseName ||
-                  passedCourseName ||
-                  location.state?.courseName,
-                streamId: selectedStreamId,
-                streamName:
-                  streamList.find((s) => String(s.streamId) === String(selectedStreamId))?.streamName ||
-                  passedStreamName ||
-                  location.state?.streamName,
-                moduleId: selectedModuleId,
-                moduleName:
-                  moduleList.find((m) => String(m.microcredentialModuleMasterId) === String(selectedModuleId))?.moduleName ||
-                  passedModuleName ||
-                  location.state?.moduleName,
-              },
-            });
-          } else {
-            navigate("/microcredential/module-list", {
-              state: { successMessage: msg },
-            });
-          }
-        }, 1000);
+        if (selectedModuleId) {
+          navigate(`/microcredential/module-topics/${selectedModuleId}`, {
+            state: {
+              successMessage: msg,
+              courseId: selectedCourseId,
+              courseName:
+                courseList.find((c) => String(c.microcredentialCourseId) === String(selectedCourseId))?.microcredentialCourseName ||
+                passedCourseName ||
+                location.state?.courseName,
+              streamId: selectedStreamId,
+              streamName:
+                streamList.find((s) => String(s.streamId) === String(selectedStreamId))?.streamName ||
+                passedStreamName ||
+                location.state?.streamName,
+              moduleId: selectedModuleId,
+              moduleName:
+                moduleList.find((m) => String(m.microcredentialModuleMasterId) === String(selectedModuleId))?.moduleName ||
+                passedModuleName ||
+                location.state?.moduleName,
+            },
+          });
+        } else {
+          navigate("/microcredential/module-list", {
+            state: { successMessage: msg },
+          });
+        }
       } else {
         setErrorMessage(
           res.message || "Failed to update topics. Please verify your fields and retry."
