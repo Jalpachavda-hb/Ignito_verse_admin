@@ -252,40 +252,69 @@ export default function EditMicrocredentialCourse() {
             setCertPreviewUri(formatImageUrl(targetCourse.certificateImage));
           }
 
-          // Initial materials from summary text if available
-          if (targetCourse.microcredentialCourseMaterialInclude) {
-            const splitted = targetCourse.microcredentialCourseMaterialInclude
+          // 1. Extract materials list from GetMicrocredentialCourseDetail (materialIncludeOutputList)
+          let initialMaterials = [];
+          const rawMaterials =
+            targetCourse.materialIncludeOutputList ||
+            targetCourse.MaterialIncludeOutputList ||
+            [];
+          if (Array.isArray(rawMaterials) && rawMaterials.length > 0) {
+            initialMaterials = rawMaterials
+              .map((m) => (typeof m === "string" ? m : m?.materialInclude || m?.MaterialInclude || ""))
+              .map((s) => s.trim())
+              .filter(Boolean);
+          } else if (targetCourse.microcredentialCourseMaterialInclude) {
+            initialMaterials = targetCourse.microcredentialCourseMaterialInclude
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean);
-            setMaterialsList(splitted);
           }
+
+          // 2. Extract learn list from GetMicrocredentialCourseDetail (microCourseLearnOutputList)
+          let initialLearns = [];
+          const rawLearns =
+            targetCourse.microCourseLearnOutputList ||
+            targetCourse.MicroCourseLearnOutputList ||
+            [];
+          if (Array.isArray(rawLearns) && rawLearns.length > 0) {
+            initialLearns = rawLearns
+              .map((l) => (typeof l === "string" ? l : l?.microCourseLearn || l?.MicroCourseLearn || ""))
+              .map((s) => s.trim())
+              .filter(Boolean);
+          }
+
+          // 3. Fallback to separate endpoints only if either list is still empty
+          if (initialMaterials.length === 0 || initialLearns.length === 0) {
+            const [matRes, learnRes] = await Promise.allSettled([
+              initialMaterials.length === 0 ? getMicroCourseMaterialIncludeData(courseId) : Promise.resolve(null),
+              initialLearns.length === 0 ? getMicroCourseLearnData(courseId) : Promise.resolve(null),
+            ]);
+
+            if (matRes.status === "fulfilled" && matRes.value?.success) {
+              const mList = matRes.value.microCourseMaterialIncludeDataList || [];
+              if (mList.length > 0) {
+                initialMaterials = mList
+                  .map((m) => (typeof m === "string" ? m : m.materialInclude || m.MaterialInclude || ""))
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+              }
+            }
+
+            if (learnRes.status === "fulfilled" && learnRes.value?.success) {
+              const lList = learnRes.value.microCourseLearnDataList || [];
+              if (lList.length > 0) {
+                initialLearns = lList
+                  .map((l) => (typeof l === "string" ? l : l.microCourseLearn || l.MicroCourseLearn || ""))
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+              }
+            }
+          }
+
+          setMaterialsList(initialMaterials);
+          setLearnList(initialLearns);
         } else {
           setErrorMessage("Course details could not be found.");
-        }
-
-        // 3. Fetch specific sub-item lists (Materials & Learn)
-        const [matRes, learnRes] = await Promise.allSettled([
-          getMicroCourseMaterialIncludeData(courseId),
-          getMicroCourseLearnData(courseId),
-        ]);
-
-        if (matRes.status === "fulfilled" && matRes.value?.success) {
-          const mList = matRes.value.microCourseMaterialIncludeDataList || [];
-          if (mList.length > 0) {
-            setMaterialsList(
-              mList.map((m) => m.materialInclude || m.MaterialInclude || "").filter(Boolean)
-            );
-          }
-        }
-
-        if (learnRes.status === "fulfilled" && learnRes.value?.success) {
-          const lList = learnRes.value.microCourseLearnDataList || [];
-          if (lList.length > 0) {
-            setLearnList(
-              lList.map((l) => l.microCourseLearn || l.MicroCourseLearn || "").filter(Boolean)
-            );
-          }
         }
       } catch (err) {
         console.error("Error loading course details:", err);
@@ -452,8 +481,10 @@ export default function EditMicrocredentialCourse() {
         CertificateImage: finalCertImagePath,
         CertificatioSkillLevel: formData.certificatioSkillLevel.trim(),
         LanguageId: Number(formData.languageId || 0),
-        MaterialIncludeList: materialsList.map((m) => ({ MaterialInclude: m })),
-        MicroCourseLearnList: learnList.map((l) => ({ MicroCourseLearn: l })),
+        materialIncludeList: materialsList.map((m) => ({ materialInclude: m, MaterialInclude: m })),
+        MaterialIncludeList: materialsList.map((m) => ({ materialInclude: m, MaterialInclude: m })),
+        microCourseLearnList: learnList.map((l) => ({ microCourseLearn: l, MicroCourseLearn: l })),
+        MicroCourseLearnList: learnList.map((l) => ({ microCourseLearn: l, MicroCourseLearn: l })),
       };
 
       const res = await microcredentialCourseAddUpdate(payload);

@@ -411,9 +411,45 @@ layer(base);
 }
 .flatpickr-calendar {
   z-index: 99999 !important;
-  @apply mt-2 !bg-white !rounded-xl !p-5 !border !border-gray-200 !shadow-theme-md dark:!border-white/5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
+  width: 350px !important;
+  min-width: 350px !important;
+  box-sizing: border-box !important;
+  @apply mt-2 !bg-white !rounded-xl !p-5 !border !border-gray-200 !shadow-theme-md dark:!border-white/5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl;
   box-shadow: 0px 4px 8px -2px rgba(16, 24, 40, 0.1),
     0px 2px 4px -2px rgba(16, 24, 40, 0.06) !important;
+}
+
+.flatpickr-days {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  @apply !border-0;
+}
+
+.dayContainer {
+  width: 308px !important;
+  min-width: 308px !important;
+  max-width: 308px !important;
+  box-sizing: border-box !important;
+}
+
+.flatpickr-weekdays {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  @apply h-auto mt-6 mb-4 !bg-transparent;
+}
+
+.flatpickr-weekdaycontainer {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 308px !important;
+}
+
+span.flatpickr-weekday {
+  width: 14.2857143% !important;
+  flex: 1 !important;
+  text-align: center !important;
 }
 .dark .flatpickr-calendar {
   box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.08),
@@ -473,17 +509,42 @@ layer(base);
   outline: none !important;
   border: 0 !important;
 }
+.flatpickr-months {
+  position: relative !important;
+  width: 100% !important;
+}
+
+.flatpickr-months .flatpickr-month {
+  height: 36px !important;
+  overflow: visible !important;
+}
+
 .flatpickr-months .flatpickr-prev-month,
 .flatpickr-months .flatpickr-next-month {
-  @apply !top-7 dark:!fill-white dark:!text-white !bg-transparent;
+  @apply dark:!fill-white dark:!text-white !bg-transparent;
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  z-index: 10 !important;
+  cursor: pointer !important;
 }
+
+.flatpickr-months .flatpickr-prev-month,
 .flatpickr-months .flatpickr-prev-month.flatpickr-prev-month,
 .flatpickr-months .flatpickr-next-month.flatpickr-prev-month {
-  @apply !left-7;
+  left: 0 !important;
 }
+
+.flatpickr-months .flatpickr-next-month,
 .flatpickr-months .flatpickr-prev-month.flatpickr-next-month,
 .flatpickr-months .flatpickr-next-month.flatpickr-next-month {
-  @apply !right-7;
+  right: 0 !important;
 }
 .flatpickr-days {
   @apply !border-0;

@@ -40,14 +40,16 @@ function ThemedDatePicker({ value, onChange, placeholder = "YYYY-MM-DD", disable
     if (!inputRef.current) return;
     fpRef.current = flatpickr(inputRef.current, {
       dateFormat: "Y-m-d",
-      static: true,
+      static: false,
+      position: "auto right",
+      appendTo: document.body,
       monthSelectorType: "static",
       defaultDate: value || undefined,
       clickOpens: true,
       prevArrow:
-        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '<svg class="stroke-current text-gray-600 dark:text-gray-300" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       nextArrow:
-        '<svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L12.5 10L7.5 5" stroke="" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        '<svg class="stroke-current text-gray-600 dark:text-gray-300" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
       onChange: (selectedDates, dateStr) => {
         if (onChange) onChange(dateStr);
       },

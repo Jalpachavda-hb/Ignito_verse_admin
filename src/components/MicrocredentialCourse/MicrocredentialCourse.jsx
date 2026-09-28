@@ -22,6 +22,7 @@ import {
   microcredentialCourseDelete,
   getMicroCourseMaterialIncludeData,
   getMicroCourseLearnData,
+  getMicrocredentialCourseDetail,
   downloadMicroTemplate,
   uploadMicroCourseExcel,
   microcredentialCourseExcelInsert,
@@ -242,11 +243,24 @@ export default function MicrocredentialCourse() {
     setMaterialsList([]);
 
     const id = course.microcredentialCourseId || course.MicrocredentialCourseId || 0;
+    const directMaterials = course.materialIncludeOutputList || course.MaterialIncludeOutputList;
+    if (Array.isArray(directMaterials) && directMaterials.length > 0) {
+      setMaterialsList(directMaterials);
+      setModalLoading(false);
+      return;
+    }
+
     if (id > 0) {
       try {
-        const res = await getMicroCourseMaterialIncludeData(id);
-        if (res && res.success && Array.isArray(res.microCourseMaterialIncludeDataList)) {
-          setMaterialsList(res.microCourseMaterialIncludeDataList);
+        const detailRes = await getMicrocredentialCourseDetail(id);
+        const mOutput = detailRes?.materialIncludeOutputList || detailRes?.MaterialIncludeOutputList;
+        if (Array.isArray(mOutput) && mOutput.length > 0) {
+          setMaterialsList(mOutput);
+        } else {
+          const res = await getMicroCourseMaterialIncludeData(id);
+          if (res && res.success && Array.isArray(res.microCourseMaterialIncludeDataList)) {
+            setMaterialsList(res.microCourseMaterialIncludeDataList);
+          }
         }
       } catch (err) {
         console.warn("Could not load material include data list:", err);
@@ -265,11 +279,24 @@ export default function MicrocredentialCourse() {
     setLearnList([]);
 
     const id = course.microcredentialCourseId || course.MicrocredentialCourseId || 0;
+    const directLearns = course.microCourseLearnOutputList || course.MicroCourseLearnOutputList;
+    if (Array.isArray(directLearns) && directLearns.length > 0) {
+      setLearnList(directLearns);
+      setModalLoading(false);
+      return;
+    }
+
     if (id > 0) {
       try {
-        const res = await getMicroCourseLearnData(id);
-        if (res && res.success && Array.isArray(res.microCourseLearnDataList)) {
-          setLearnList(res.microCourseLearnDataList);
+        const detailRes = await getMicrocredentialCourseDetail(id);
+        const lOutput = detailRes?.microCourseLearnOutputList || detailRes?.MicroCourseLearnOutputList;
+        if (Array.isArray(lOutput) && lOutput.length > 0) {
+          setLearnList(lOutput);
+        } else {
+          const res = await getMicroCourseLearnData(id);
+          if (res && res.success && Array.isArray(res.microCourseLearnDataList)) {
+            setLearnList(res.microCourseLearnDataList);
+          }
         }
       } catch (err) {
         console.warn("Could not load learn data list:", err);
@@ -1292,7 +1319,7 @@ export default function MicrocredentialCourse() {
                         {materialsList.map((item, idx) => (
                           <li key={idx} className="flex items-center gap-2">
                             <span className="size-1.5 rounded-full bg-blue-500 shrink-0" />
-                            <span>{item.materialInclude}</span>
+                            <span>{typeof item === "string" ? item : item?.materialInclude || item?.MaterialInclude || ""}</span>
                           </li>
                         ))}
                       </ul>
@@ -1320,7 +1347,7 @@ export default function MicrocredentialCourse() {
                             <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-[10px] dark:bg-emerald-950/50 dark:text-emerald-400">
                               ✓
                             </span>
-                            <span className="leading-relaxed">{item.microCourseLearn}</span>
+                            <span className="leading-relaxed">{typeof item === "string" ? item : item?.microCourseLearn || item?.MicroCourseLearn || ""}</span>
                           </li>
                         ))}
                       </ul>

@@ -10,6 +10,50 @@ export function parseGetMicrocredentialCourseDetailOutput(rawJson = {}, status =
     const isHttpOk = status >= 200 && status < 300;
     const isSuccess = Boolean(rawJson?.isSuccess ?? rawJson?.IsSuccess ?? isHttpOk);
 
+    const rawMaterials = rawJson?.materialIncludeOutputList || rawJson?.MaterialIncludeOutputList || [];
+    const materialIncludeOutputList = Array.isArray(rawMaterials)
+        ? rawMaterials.map(item => {
+            if (typeof item === 'string') {
+                return {
+                    materialIncludeId: 0,
+                    MaterialIncludeId: 0,
+                    materialInclude: item,
+                    MaterialInclude: item
+                };
+            }
+            const id = item?.materialIncludeId ?? item?.MaterialIncludeId ?? 0;
+            const text = item?.materialInclude || item?.MaterialInclude || '';
+            return {
+                materialIncludeId: id,
+                MaterialIncludeId: id,
+                materialInclude: text,
+                MaterialInclude: text
+            };
+        })
+        : [];
+
+    const rawLearns = rawJson?.microCourseLearnOutputList || rawJson?.MicroCourseLearnOutputList || [];
+    const microCourseLearnOutputList = Array.isArray(rawLearns)
+        ? rawLearns.map(item => {
+            if (typeof item === 'string') {
+                return {
+                    microCourseLearnId: 0,
+                    MicroCourseLearnId: 0,
+                    microCourseLearn: item,
+                    MicroCourseLearn: item
+                };
+            }
+            const id = item?.microCourseLearnId ?? item?.MicroCourseLearnId ?? 0;
+            const text = item?.microCourseLearn || item?.MicroCourseLearn || '';
+            return {
+                microCourseLearnId: id,
+                MicroCourseLearnId: id,
+                microCourseLearn: text,
+                MicroCourseLearn: text
+            };
+        })
+        : [];
+
     return {
         success: isSuccess,
         status,
@@ -39,8 +83,10 @@ export function parseGetMicrocredentialCourseDetailOutput(rawJson = {}, status =
         professorName: rawJson?.professorName || rawJson?.ProfessorName || '',
         profileImage: rawJson?.profileImage || rawJson?.ProfileImage || '',
         updatedOn: rawJson?.updatedOn || rawJson?.UpdatedOn || '',
-        materialIncludeOutputList: rawJson?.materialIncludeOutputList || rawJson?.MaterialIncludeOutputList || [],
-        microCourseLearnOutputList: rawJson?.microCourseLearnOutputList || rawJson?.MicroCourseLearnOutputList || [],
+        materialIncludeOutputList,
+        MaterialIncludeOutputList: materialIncludeOutputList,
+        microCourseLearnOutputList,
+        MicroCourseLearnOutputList: microCourseLearnOutputList,
         encryptedMicrocredentialCourseId: rawJson?.encryptedMicrocredentialCourseId || rawJson?.EncryptedMicrocredentialCourseId || '',
         rawData: rawJson
     };
@@ -77,7 +123,9 @@ export function parseGetMicrocredentialCourseDetailErrorOutput(rawJson = {}, sta
         profileImage: '',
         updatedOn: '',
         materialIncludeOutputList: [],
+        MaterialIncludeOutputList: [],
         microCourseLearnOutputList: [],
+        MicroCourseLearnOutputList: [],
         encryptedMicrocredentialCourseId: '',
         rawData: rawJson
     };

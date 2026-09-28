@@ -272,8 +272,10 @@ export default function AddMicrocredentialCourse() {
         CertificateImage: finalCertImagePath,
         CertificatioSkillLevel: formData.certificatioSkillLevel.trim(),
         LanguageId: Number(formData.languageId || 0),
-        MaterialIncludeList: materialsList.map((m) => ({ MaterialInclude: m })),
-        MicroCourseLearnList: learnList.map((l) => ({ MicroCourseLearn: l })),
+        materialIncludeList: materialsList.map((m) => ({ materialInclude: m, MaterialInclude: m })),
+        MaterialIncludeList: materialsList.map((m) => ({ materialInclude: m, MaterialInclude: m })),
+        microCourseLearnList: learnList.map((l) => ({ microCourseLearn: l, MicroCourseLearn: l })),
+        MicroCourseLearnList: learnList.map((l) => ({ microCourseLearn: l, MicroCourseLearn: l })),
       };
 
       const res = await microcredentialCourseAddUpdate(payload);
