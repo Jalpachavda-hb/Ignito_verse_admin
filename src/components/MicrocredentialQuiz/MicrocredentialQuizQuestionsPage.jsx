@@ -1108,11 +1108,10 @@ export default function MicrocredentialQuizQuestionsPage() {
                             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                               {q.points || 1} Pts
                             </span>
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              q.isActive
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${q.isActive
                                 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                                 : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                            }`}>
+                              }`}>
                               {q.isActive ? "Active" : "Inactive"}
                             </span>
                           </div>
@@ -1128,11 +1127,10 @@ export default function MicrocredentialQuizQuestionsPage() {
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(q)}
-                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer ${
-                            q.isActive
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer ${q.isActive
                               ? "bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300"
                               : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300"
-                          }`}
+                            }`}
                         >
                           {q.isActive ? "Deactivate" : "Activate"}
                         </button>
@@ -1193,11 +1191,10 @@ export default function MicrocredentialQuizQuestionsPage() {
                     key={t.id}
                     type="button"
                     onClick={() => setQuestionType(t.id)}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                      questionType === t.id
+                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${questionType === t.id
                         ? "border-brand-500 bg-brand-50/80 text-brand-900 dark:bg-brand-950/50 dark:text-brand-200 shadow-xs ring-1 ring-brand-500"
                         : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                    }`}
+                      }`}
                   >
                     <span className="text-xs font-bold">{t.id}. {t.name}</span>
                     <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{t.desc}</span>
