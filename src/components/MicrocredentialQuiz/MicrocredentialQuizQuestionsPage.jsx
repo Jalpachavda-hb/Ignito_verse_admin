@@ -10,6 +10,7 @@ import {
 } from "../../icons";
 import {
   getDegreeQuizQuestionsList,
+  getDegreeQuestionByQuestionId,
   saveDegreeQuizQuestionMaster,
   toggleDegreeQuizQuestionStatus,
   deleteDegreeQuizQuestion,
@@ -53,6 +54,7 @@ export default function MicrocredentialQuizQuestionsPage() {
   const [questions, setQuestions] = useState([]);
   const [totalPoints, setTotalPoints] = useState(0);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [loadingQuestionDetailId, setLoadingQuestionDetailId] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -378,42 +380,183 @@ export default function MicrocredentialQuizQuestionsPage() {
   }, []);
 
   // Edit Existing Question
-  const handleEditQuestion = (q) => {
+  const handleEditQuestion = async (q) => {
     const qId = q.questionId || q.questionsId || 0;
-    setEditingQuestionId(qId);
-    const qType = Number(q.degreeQuestionType || q.questionTypeId || 1);
-    setQuestionType(qType);
+    if (!qId) return;
 
-    const rawQuestionText = q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
-    const cleanQuestionText = rawQuestionText.replace(/<[^>]*>?/gm, '').trim() || rawQuestionText;
-
-    setCommonForm({
-      title: q.title || "",
-      questionText: cleanQuestionText,
-      questionFeedback: q.questionFeedback || "",
-      hint: q.hint || "",
-      shortDescription: q.shortDescription || "",
-      enumeration: String(q.enumeration || "1"),
-      customWeights: q.customWeights || "",
-      difficulty: Number(q.difficulty || 1),
-      points: Number(q.points || 1),
-      randomizeAnswers: Boolean(q.randomizeAnswers),
-      howPointAssignedToBlanks: q.howPointAssignedToBlanks || "AllOrNothing"
-    });
-
-    if (Array.isArray(q.options) && q.options.length > 0) {
-      setOptions(q.options.map((opt, idx) => ({
-        text: opt.text || opt.Text || `Option ${idx + 1}`,
-        isCorrect: Boolean(opt.isCorrect ?? opt.IsCorrect),
-        answerFeedback: opt.answerFeedback || opt.AnswerFeedback || "",
-        displayOrder: opt.displayOrder || opt.DisplayOrder || (idx + 1)
-      })));
-    }
-
-    setActiveTab("editor");
+    setLoadingQuestionDetailId(qId);
     setErrorMessage("");
     setSuccessMessage("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    try {
+      const res = await getDegreeQuestionByQuestionId({ quizId, questionId: qId });
+      const qData = res?.question || {};
+      const answerOpts = res?.answerOptions || [];
+
+      setEditingQuestionId(qId);
+      const qType = Number(qData.degreeQuestionType || q.degreeQuestionType || q.questionTypeId || 1);
+      setQuestionType(qType);
+
+      const rawQuestionText = qData.questionText || q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
+      const cleanQuestionText = rawQuestionText ? rawQuestionText.replace(/<\/?p>/gi, '').replace(/&nbsp;/gi, ' ').trim() : "";
+      const resolvedTitle = qData.title || q.title || (cleanQuestionText ? cleanQuestionText.substring(0, 60) : "");
+
+      setCommonForm({
+        title: resolvedTitle,
+        questionText: cleanQuestionText,
+        questionFeedback: qData.questionFeedback || q.questionFeedback || "",
+        hint: qData.hint || q.hint || "",
+        shortDescription: qData.shortDescription || q.shortDescription || resolvedTitle,
+        enumeration: String(qData.enumeration || q.enumeration || "1"),
+        customWeights: qData.customWeights || q.customWeights || "",
+        difficulty: Number(qData.difficulty || q.difficulty || 1),
+        points: Number(qData.points ?? q.points ?? 1),
+        randomizeAnswers: Boolean(qData.randomizeAnswers ?? q.randomizeAnswers),
+        howPointAssignedToBlanks: qData.howPointAssignedToBlanks || q.howPointAssignedToBlanks || "AllOrNothing"
+      });
+
+      // Type 1 (MCQ) & Type 4 (Multi-Select)
+      if (Array.isArray(answerOpts) && answerOpts.length > 0) {
+        setOptions(answerOpts.map((opt, idx) => ({
+          answerId: opt.answerId || 0,
+          text: opt.text || opt.Text || `Option ${idx + 1}`,
+          isCorrect: Boolean(opt.isCorrect ?? opt.IsCorrect),
+          answerFeedback: opt.answerFeedback || opt.AnswerFeedback || "",
+          displayOrder: opt.displayOrder || opt.DisplayOrder || (idx + 1)
+        })));
+      }
+
+      // Type 2 (True/False)
+      if (qType === 2 && Array.isArray(answerOpts) && answerOpts.length > 0) {
+        const trueOpt = answerOpts.find(o => (o.text || "").toLowerCase() === "true");
+        const falseOpt = answerOpts.find(o => (o.text || "").toLowerCase() === "false");
+        if (trueOpt) {
+          setTfCorrect(Boolean(trueOpt.isCorrect));
+          setTfFeedbackTrue(trueOpt.answerFeedback || "");
+        }
+        if (falseOpt) {
+          setTfFeedbackFalse(falseOpt.answerFeedback || "");
+        }
+      }
+
+      // Type 3 (Fill-in-the-Blank)
+      if (qType === 3) {
+        if (Array.isArray(res?.textComponents) && res.textComponents.length > 0) {
+          const textComp = res.textComponents.find(c => c.componentType === "Text") || res.textComponents[0];
+          if (textComp && textComp.content) setFibPrefix(textComp.content);
+        }
+        if (Array.isArray(res?.blankAnswers) && res.blankAnswers.length > 0) {
+          const b = res.blankAnswers[0];
+          if (b.answer) setFibAnswer(b.answer);
+          if (b.feedback) setFibFeedback(b.feedback);
+          if (b.evaluationTypeId) setFibEvaluationType(Number(b.evaluationTypeId));
+        }
+      }
+
+      // Type 5 (Matching)
+      if (qType === 5) {
+        if (Array.isArray(res?.matchingChoices) && res.matchingChoices.length > 0) {
+          setMatchChoices(res.matchingChoices.map((c, i) => ({
+            tempChoiceKey: c.tempChoiceKey || (i + 1),
+            choiceText: c.choiceText || c.text || "",
+            displayOrder: c.displayOrder || (i + 1)
+          })));
+        }
+        if (Array.isArray(res?.matchingPairs) && res.matchingPairs.length > 0) {
+          setMatchPairs(res.matchingPairs.map((p, i) => ({
+            prompt: p.prompt || "",
+            correctChoice: Number(p.correctChoice) || 1,
+            displayOrder: p.displayOrder || (i + 1)
+          })));
+        }
+        if (res?.matchingQuestion) {
+          setShuffleMatches(Boolean(res.matchingQuestion.shuffleMatches));
+        }
+      }
+
+      // Type 6 (Ordering)
+      if (qType === 6 && Array.isArray(res?.orderingItems) && res.orderingItems.length > 0) {
+        setOrderItems(res.orderingItems.map((it, i) => ({
+          itemValue: it.itemValue || it.text || "",
+          correctOrder: it.correctOrder || (i + 1),
+          feedback: it.feedback || "",
+          displayOrder: it.displayOrder || (i + 1)
+        })));
+      }
+
+      // Type 7 (Written Response)
+      if (qType === 7 && res?.writtenResponseSetting) {
+        setWrittenSettings(prev => ({
+          ...prev,
+          enableHtmlEditor: Boolean(res.writtenResponseSetting.enableHtmlEditor),
+          enableHtmlEditorText: Boolean(res.writtenResponseSetting.enableHtmlEditorText),
+          addFile: Boolean(res.writtenResponseSetting.addFile),
+          recordAudio: Boolean(res.writtenResponseSetting.recordAudio),
+          recordVideo: Boolean(res.writtenResponseSetting.recordVideo),
+          allowLearnerAttachments: Boolean(res.writtenResponseSetting.allowLearnerAttachments),
+          initialLearnerText: res.writtenResponseSetting.initialLearnerText || "",
+          customResponseBoxSize: res.writtenResponseSetting.customResponseBoxSize || "Large",
+          evaluatorAnswerkey: res.writtenResponseSetting.evaluatorAnswerkey || ""
+        }));
+      }
+
+      // Type 8 (Short Answer)
+      if (qType === 8 && Array.isArray(res?.shortAnswers) && res.shortAnswers.length > 0) {
+        setShortAnswerText(res.shortAnswers[0].answerText || "");
+        setShortAnswerMethod(res.shortAnswers[0].evaluationType || "ExactMatch");
+      }
+
+      // Type 9 (Arithmetic)
+      if (qType === 9 && res?.arithmeticQuestion) {
+        setArithmeticForm(prev => ({
+          ...prev,
+          formula: res.arithmeticQuestion.formula || "",
+          answerPrecision: Number(res.arithmeticQuestion.answerPrecision) || 2,
+          enforcePrecision: Boolean(res.arithmeticQuestion.enforcePrecision),
+          tolerance: Number(res.arithmeticQuestion.tolerance) || 0.01,
+          toleranceType: res.arithmeticQuestion.tolerance_type || "Absolute",
+          unitText: res.arithmeticQuestion.unitText || "",
+          unitWorth: Number(res.arithmeticQuestion.unitWorth) || 1.0,
+          variables: Array.isArray(res?.arithmeticVariables) && res.arithmeticVariables.length > 0
+            ? res.arithmeticVariables
+            : prev.variables
+        }));
+      }
+
+      // Type 10 (Significant Figures)
+      if (qType === 10 && res?.significantFiguresQuestion) {
+        setSigFigsForm(prev => ({
+          ...prev,
+          formula: res.significantFiguresQuestion.formula || "",
+          significantFiguresCount: Number(res.significantFiguresQuestion.significantFiguresCount) || 3,
+          deductPercentage: Number(res.significantFiguresQuestion.deductPercentage) || 10.0,
+          toleranceValue: Number(res.significantFiguresQuestion.toleranceValue) || 0.05,
+          unitText: res.significantFiguresQuestion.unitText || "",
+          variables: Array.isArray(res?.significantFiguresVariables) && res.significantFiguresVariables.length > 0
+            ? res.significantFiguresVariables
+            : prev.variables
+        }));
+      }
+
+      // Type 12 (Likert)
+      if (qType === 12) {
+        if (res?.likertQuestion) {
+          setLikertScaleTypeId(Number(res.likertQuestion.scaleTypeId) || 5);
+          setLikertIncludeNA(Boolean(res.likertQuestion.includeNAOption));
+        }
+        if (Array.isArray(res?.likertStatements) && res.likertStatements.length > 0) {
+          setLikertStatements(res.likertStatements);
+        }
+      }
+
+      setActiveTab("editor");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      console.error("Error fetching question data for edit:", err);
+      setErrorMessage("Failed to load question details for editing.");
+    } finally {
+      setLoadingQuestionDetailId(0);
+    }
   };
 
   // Toggle Active Status
@@ -459,24 +602,28 @@ export default function MicrocredentialQuizQuestionsPage() {
       return;
     }
 
+    const finalTitle = commonForm.title.trim() || commonForm.questionText.trim().replace(/<[^>]*>?/gm, '').substring(0, 60) || "Question";
+
     setSavingQuestion(true);
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
+      const qKey = editingQuestionId > 0 ? editingQuestionId : 0;
       const payload = {
         quizId,
         questionId: editingQuestionId,
+        questionsId: editingQuestionId,
         degreeQuestionType: questionType,
         degreeQuestionList: [
           {
-            TempQuestionKey: 0,
+            TempQuestionKey: qKey,
             DegreeQuestionType: questionType,
-            Title: commonForm.title.trim(),
+            Title: finalTitle,
             QuestionText: commonForm.questionText.includes("<") ? commonForm.questionText : `<p>${commonForm.questionText}</p>`,
             QuestionFeedback: commonForm.questionFeedback,
             Hint: commonForm.hint,
-            ShortDescription: commonForm.shortDescription,
+            ShortDescription: commonForm.shortDescription || finalTitle,
             Enumeration: commonForm.enumeration,
             CustomWeights: commonForm.customWeights,
             Difficulty: Number(commonForm.difficulty) || 1,
@@ -491,23 +638,28 @@ export default function MicrocredentialQuizQuestionsPage() {
 
       if (questionType === 1 || questionType === 4) {
         payload.degreeAnswerOptionList = options.map((opt, idx) => ({
-          TempQuestionKey: 0,
+          AnswerId: Number(opt.AnswerId ?? opt.answerId ?? 0),
+          TempQuestionKey: qKey,
           Text: opt.text,
           AnswerFeedback: opt.answerFeedback || "",
           IsCorrect: Boolean(opt.isCorrect),
           DisplayOrder: idx + 1
         }));
       } else if (questionType === 2) {
+        const trueAnswerId = Number(options.find(o => (o.text || "").toLowerCase() === "true")?.answerId || 0);
+        const falseAnswerId = Number(options.find(o => (o.text || "").toLowerCase() === "false")?.answerId || 0);
         payload.degreeAnswerOptionList = [
           {
-            TempQuestionKey: 0,
+            AnswerId: trueAnswerId,
+            TempQuestionKey: qKey,
             Text: "True",
             AnswerFeedback: tfFeedbackTrue,
             IsCorrect: tfCorrect === true,
             DisplayOrder: 1
           },
           {
-            TempQuestionKey: 0,
+            AnswerId: falseAnswerId,
+            TempQuestionKey: qKey,
             Text: "False",
             AnswerFeedback: tfFeedbackFalse,
             IsCorrect: tfCorrect === false,
@@ -517,7 +669,7 @@ export default function MicrocredentialQuizQuestionsPage() {
       } else if (questionType === 3) {
         payload.degreeQuestionTextComponentList = [
           {
-            TempQuestionKey: 0,
+            TempQuestionKey: qKey,
             TempQuestionTextComponentKey: 1,
             ComponentType: "Text",
             Content: fibPrefix,
@@ -988,10 +1140,15 @@ export default function MicrocredentialQuizQuestionsPage() {
                         <button
                           type="button"
                           onClick={() => handleEditQuestion(q)}
-                          className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer"
+                          disabled={loadingQuestionDetailId === qId}
+                          className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer disabled:opacity-50"
                           title="Edit Question"
                         >
-                          <PencilIcon className="size-3.5" />
+                          {loadingQuestionDetailId === qId ? (
+                            <div className="size-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <PencilIcon className="size-3.5" />
+                          )}
                         </button>
 
                         <button
@@ -1053,7 +1210,7 @@ export default function MicrocredentialQuizQuestionsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
               <div className="sm:col-span-6">
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Question Title / Short Description
+                  Question Title / Short Description <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1061,6 +1218,7 @@ export default function MicrocredentialQuizQuestionsPage() {
                   value={commonForm.title}
                   onChange={(e) => setCommonForm(prev => ({ ...prev, title: e.target.value, shortDescription: e.target.value }))}
                   className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  required
                 />
               </div>
 

@@ -243,6 +243,36 @@ export function buildDeleteDegreeQuizQuestionsInput(quizId = 0, questionId = 0, 
 }
 
 /**
+ * 2.9C Get Degree Question by Question ID Input
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuestionByQuestionId
+ */
+export function buildGetDegreeQuestionByQuestionIdInput(quizId = 0, questionId = 0, adminId = 0) {
+    const opts = normalizeOptions(quizId) || { quizId, questionId, adminId };
+    const cleanQuizId = Number(opts.quizId ?? opts.QuizId ?? 0);
+    const cleanQuestionId = Number(opts.questionId ?? opts.QuestionId ?? opts.questionsId ?? opts.QuestionsId ?? 0);
+    const cleanAdminId = Number(opts.adminId ?? opts.AdminId ?? 1);
+
+    return {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            quizId: cleanQuizId,
+            QuizId: cleanQuizId,
+            questionId: cleanQuestionId,
+            QuestionId: cleanQuestionId,
+            questionsId: cleanQuestionId,
+            QuestionsId: cleanQuestionId,
+            adminId: cleanAdminId,
+            AdminId: cleanAdminId
+        })
+    };
+}
+
+export const getDegreeQuestionByQuestionIdInput = buildGetDegreeQuestionByQuestionIdInput;
+
+/**
  * 2.9B Add / Update Degree Quiz Question Master Input
  * Endpoint: POST /api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate
  * Supports all 12 Question Types
@@ -278,8 +308,10 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
             }
         ];
 
+    const questionKey = questionId > 0 ? questionId : 0;
+
     const degreeQuestionList = rawQuestionList.map((item) => ({
-        TempQuestionKey: Number(item.TempQuestionKey ?? item.tempQuestionKey ?? 0),
+        TempQuestionKey: Number(item.TempQuestionKey ?? item.tempQuestionKey ?? questionKey) || questionKey,
         DegreeQuestionType: Number(item.DegreeQuestionType ?? item.degreeQuestionType ?? degreeQuestionType),
         Title: String(item.Title ?? item.title ?? ''),
         QuestionText: String(item.QuestionText ?? item.questionText ?? item.FinalQuestionName ?? item.finalQuestionName ?? ''),
@@ -298,8 +330,13 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
 
     const payload = {
         QuizId: quizId,
+        quizId: quizId,
         AdminId: adminId,
+        adminId: adminId,
         QuestionId: questionId,
+        questionId: questionId,
+        QuestionsId: questionId,
+        questionsId: questionId,
         DegreeQuestionList: degreeQuestionList
     };
 
@@ -308,7 +345,8 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const answerOptionList = opts.degreeAnswerOptionList ?? opts.DegreeAnswerOptionList;
         if (Array.isArray(answerOptionList)) {
             payload.DegreeAnswerOptionList = answerOptionList.map((opt, idx) => ({
-                TempQuestionKey: Number(opt.TempQuestionKey ?? opt.tempQuestionKey ?? 0),
+                AnswerId: Number(opt.AnswerId ?? opt.answerId ?? 0),
+                TempQuestionKey: Number(opt.TempQuestionKey ?? opt.tempQuestionKey ?? questionKey) || questionKey,
                 Text: String(opt.Text ?? opt.text ?? ''),
                 AnswerFeedback: String(opt.AnswerFeedback ?? opt.answerFeedback ?? ''),
                 IsCorrect: Boolean(opt.IsCorrect ?? opt.isCorrect ?? false),
@@ -322,7 +360,7 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const textComponents = opts.degreeQuestionTextComponentList ?? opts.DegreeQuestionTextComponentList;
         if (Array.isArray(textComponents)) {
             payload.DegreeQuestionTextComponentList = textComponents.map((tc, idx) => ({
-                TempQuestionKey: Number(tc.TempQuestionKey ?? tc.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(tc.TempQuestionKey ?? tc.tempQuestionKey ?? questionKey) || questionKey,
                 TempQuestionTextComponentKey: Number(tc.TempQuestionTextComponentKey ?? tc.tempQuestionTextComponentKey ?? (idx + 1)),
                 ComponentType: String(tc.ComponentType ?? tc.componentType ?? (idx === 1 ? 'Blank' : 'Text')),
                 Content: String(tc.Content ?? tc.content ?? tc.Text ?? tc.text ?? ''),
@@ -348,7 +386,7 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const matchingQ = opts.degreeMatchingQuestionList ?? opts.DegreeMatchingQuestionList;
         if (Array.isArray(matchingQ)) {
             payload.DegreeMatchingQuestionList = matchingQ.map((mq) => ({
-                TempQuestionKey: Number(mq.TempQuestionKey ?? mq.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(mq.TempQuestionKey ?? mq.tempQuestionKey ?? questionKey) || questionKey,
                 ShuffleMatches: Boolean(mq.ShuffleMatches ?? mq.shuffleMatches ?? true),
                 ShuffleChoices: Boolean(mq.ShuffleChoices ?? mq.shuffleChoices ?? true),
                 MatchRandomize: Boolean(mq.MatchRandomize ?? mq.matchRandomize ?? true),
@@ -358,7 +396,7 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const matchingChoices = opts.degreeMatchingChoiceList ?? opts.DegreeMatchingChoiceList;
         if (Array.isArray(matchingChoices)) {
             payload.DegreeMatchingChoiceList = matchingChoices.map((mc, idx) => ({
-                TempQuestionKey: Number(mc.TempQuestionKey ?? mc.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(mc.TempQuestionKey ?? mc.tempQuestionKey ?? questionKey) || questionKey,
                 TempChoiceKey: Number(mc.TempChoiceKey ?? mc.tempChoiceKey ?? (idx + 1)),
                 ChoiceText: String(mc.ChoiceText ?? mc.choiceText ?? ''),
                 DisplayOrder: Number(mc.DisplayOrder ?? mc.displayOrder ?? (idx + 1))
@@ -367,7 +405,7 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const matchingPairs = opts.degreeMatchingPairList ?? opts.DegreeMatchingPairList;
         if (Array.isArray(matchingPairs)) {
             payload.DegreeMatchingPairList = matchingPairs.map((mp, idx) => ({
-                TempQuestionKey: Number(mp.TempQuestionKey ?? mp.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(mp.TempQuestionKey ?? mp.tempQuestionKey ?? questionKey) || questionKey,
                 Prompt: String(mp.Prompt ?? mp.prompt ?? ''),
                 CorrectChoice: Number(mp.CorrectChoice ?? mp.correctChoice ?? 1),
                 DisplayOrder: Number(mp.DisplayOrder ?? mp.displayOrder ?? (idx + 1))
@@ -380,14 +418,14 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const orderingQ = opts.degreeOrderingQuestionList ?? opts.DegreeOrderingQuestionList;
         if (Array.isArray(orderingQ)) {
             payload.DegreeOrderingQuestionList = orderingQ.map((oq) => ({
-                TempQuestionKey: Number(oq.TempQuestionKey ?? oq.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(oq.TempQuestionKey ?? oq.tempQuestionKey ?? questionKey) || questionKey,
                 GradingMethodTypeId: Number(oq.GradingMethodTypeId ?? oq.gradingMethodTypeId ?? 1)
             }));
         }
         const orderingItems = opts.degreeOrderingItemList ?? opts.DegreeOrderingItemList;
         if (Array.isArray(orderingItems)) {
             payload.DegreeOrderingItemList = orderingItems.map((oi, idx) => ({
-                TempQuestionKey: Number(oi.TempQuestionKey ?? oi.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(oi.TempQuestionKey ?? oi.tempQuestionKey ?? questionKey) || questionKey,
                 ItemValue: String(oi.ItemValue ?? oi.itemValue ?? ''),
                 CorrectOrder: Number(oi.CorrectOrder ?? oi.correctOrder ?? (idx + 1)),
                 Feedback: String(oi.Feedback ?? oi.feedback ?? ''),
@@ -401,7 +439,7 @@ export function buildDegreeQuizQuestionMasterAddUpdateInput(params = {}) {
         const writtenSettings = opts.degreeWrittenResponseSettingList ?? opts.DegreeWrittenResponseSettingList;
         if (Array.isArray(writtenSettings)) {
             payload.DegreeWrittenResponseSettingList = writtenSettings.map((ws) => ({
-                TempQuestionKey: Number(ws.TempQuestionKey ?? ws.tempQuestionKey ?? 0),
+                TempQuestionKey: Number(ws.TempQuestionKey ?? ws.tempQuestionKey ?? questionKey) || questionKey,
                 EnableHtmlEditor: Boolean(ws.EnableHtmlEditor ?? ws.enableHtmlEditor ?? true),
                 EnableHtmlEditorText: Boolean(ws.EnableHtmlEditorText ?? ws.enableHtmlEditorText ?? true),
                 AddFile: Boolean(ws.AddFile ?? ws.addFile ?? false),

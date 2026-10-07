@@ -8,6 +8,7 @@ import {
 } from "../../icons";
 import {
   getDegreeQuizQuestionsList,
+  getDegreeQuestionByQuestionId,
   saveDegreeQuizQuestionMaster,
   toggleDegreeQuizQuestionStatus,
   deleteDegreeQuizQuestion
@@ -31,6 +32,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
   const [questions, setQuestions] = useState([]);
   const [totalPoints, setTotalPoints] = useState(0);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [loadingQuestionDetailId, setLoadingQuestionDetailId] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -219,41 +221,86 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
   }, [isOpen, quizId, loadQuestions, initialTab, handleAddNewQuestion]);
 
   // Edit Existing Question
-  const handleEditQuestion = (q) => {
+  const handleEditQuestion = async (q) => {
     const qId = q.questionId || q.questionsId || 0;
-    setEditingQuestionId(qId);
-    const qType = Number(q.degreeQuestionType || q.questionTypeId || 1);
-    setQuestionType(qType);
+    if (!qId) return;
 
-    const rawQuestionText = q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
-    const cleanQuestionText = rawQuestionText.replace(/<[^>]*>?/gm, '').trim() || rawQuestionText;
-
-    setCommonForm({
-      title: q.title || "",
-      questionText: cleanQuestionText,
-      questionFeedback: q.questionFeedback || "",
-      hint: q.hint || "",
-      shortDescription: q.shortDescription || "",
-      enumeration: String(q.enumeration || "1"),
-      customWeights: q.customWeights || "",
-      difficulty: Number(q.difficulty || 1),
-      points: Number(q.points || 1),
-      randomizeAnswers: Boolean(q.randomizeAnswers),
-      howPointAssignedToBlanks: q.howPointAssignedToBlanks || "AllOrNothing"
-    });
-
-    if (Array.isArray(q.options) && q.options.length > 0) {
-      setOptions(q.options.map((opt, idx) => ({
-        text: opt.text || opt.Text || `Option ${idx + 1}`,
-        isCorrect: Boolean(opt.isCorrect ?? opt.IsCorrect),
-        answerFeedback: opt.answerFeedback || opt.AnswerFeedback || "",
-        displayOrder: opt.displayOrder || opt.DisplayOrder || (idx + 1)
-      })));
-    }
-
-    setActiveTab("editor");
+    setLoadingQuestionDetailId(qId);
     setErrorMessage("");
     setSuccessMessage("");
+
+    try {
+      const res = await getDegreeQuestionByQuestionId({ quizId, questionId: qId });
+      const qData = res?.question || {};
+      const answerOpts = res?.answerOptions || [];
+
+      setEditingQuestionId(qId);
+      const qType = Number(qData.degreeQuestionType || q.degreeQuestionType || q.questionTypeId || 1);
+      setQuestionType(qType);
+
+      const rawQuestionText = qData.questionText || q.finalQuestionName || q.FinalQuestionName || q.questionText || q.question || "";
+      const cleanQuestionText = rawQuestionText ? rawQuestionText.replace(/<\/?p>/gi, '').replace(/&nbsp;/gi, ' ').trim() : "";
+      const resolvedTitle = qData.title || q.title || (cleanQuestionText ? cleanQuestionText.substring(0, 60) : "");
+
+      setCommonForm({
+        title: resolvedTitle,
+        questionText: cleanQuestionText,
+        questionFeedback: qData.questionFeedback || q.questionFeedback || "",
+        hint: qData.hint || q.hint || "",
+        shortDescription: qData.shortDescription || q.shortDescription || resolvedTitle,
+        enumeration: String(qData.enumeration || q.enumeration || "1"),
+        customWeights: qData.customWeights || q.customWeights || "",
+        difficulty: Number(qData.difficulty || q.difficulty || 1),
+        points: Number(qData.points ?? q.points ?? 1),
+        randomizeAnswers: Boolean(qData.randomizeAnswers ?? q.randomizeAnswers),
+        howPointAssignedToBlanks: qData.howPointAssignedToBlanks || q.howPointAssignedToBlanks || "AllOrNothing"
+      });
+
+      // Type 1 (MCQ) & Type 4 (Multi-Select)
+      if (Array.isArray(answerOpts) && answerOpts.length > 0) {
+        setOptions(answerOpts.map((opt, idx) => ({
+          answerId: opt.answerId || 0,
+          text: opt.text || opt.Text || `Option ${idx + 1}`,
+          isCorrect: Boolean(opt.isCorrect ?? opt.IsCorrect),
+          answerFeedback: opt.answerFeedback || opt.AnswerFeedback || "",
+          displayOrder: opt.displayOrder || opt.DisplayOrder || (idx + 1)
+        })));
+      }
+
+      // Type 2 (True/False)
+      if (qType === 2 && Array.isArray(answerOpts) && answerOpts.length > 0) {
+        const trueOpt = answerOpts.find(o => (o.text || "").toLowerCase() === "true");
+        const falseOpt = answerOpts.find(o => (o.text || "").toLowerCase() === "false");
+        if (trueOpt) {
+          setTfCorrect(Boolean(trueOpt.isCorrect));
+          setTfFeedbackTrue(trueOpt.answerFeedback || "");
+        }
+        if (falseOpt) {
+          setTfFeedbackFalse(falseOpt.answerFeedback || "");
+        }
+      }
+
+      // Type 3 (Fill-in-the-Blank)
+      if (qType === 3) {
+        if (Array.isArray(res?.textComponents) && res.textComponents.length > 0) {
+          const textComp = res.textComponents.find(c => c.componentType === "Text") || res.textComponents[0];
+          if (textComp && textComp.content) setFibPrefix(textComp.content);
+        }
+        if (Array.isArray(res?.blankAnswers) && res.blankAnswers.length > 0) {
+          const b = res.blankAnswers[0];
+          if (b.answer) setFibAnswer(b.answer);
+          if (b.feedback) setFibFeedback(b.feedback);
+          if (b.evaluationTypeId) setFibEvaluationType(Number(b.evaluationTypeId));
+        }
+      }
+
+      setActiveTab("editor");
+    } catch (err) {
+      console.error("Error loading question data in QuestionMasterModal:", err);
+      setErrorMessage("Failed to load question details for editing.");
+    } finally {
+      setLoadingQuestionDetailId(0);
+    }
   };
 
   // Toggle Active Status
@@ -298,25 +345,31 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
       return;
     }
 
+    const finalTitle = commonForm.title.trim() || commonForm.questionText.trim().replace(/<[^>]*>?/gm, '').substring(0, 60) || "Question";
+
     setSavingQuestion(true);
     setErrorMessage("");
     setSuccessMessage("");
 
+
+    
     try {
+      const qKey = editingQuestionId > 0 ? editingQuestionId : 0;
       // Build base payload
       const payload = {
         quizId,
         questionId: editingQuestionId,
+        questionsId: editingQuestionId,
         degreeQuestionType: questionType,
         degreeQuestionList: [
           {
-            TempQuestionKey: 0,
+            TempQuestionKey: qKey,
             DegreeQuestionType: questionType,
-            Title: commonForm.title.trim(),
+            Title: finalTitle,
             QuestionText: commonForm.questionText.includes("<") ? commonForm.questionText : `<p>${commonForm.questionText}</p>`,
             QuestionFeedback: commonForm.questionFeedback,
             Hint: commonForm.hint,
-            ShortDescription: commonForm.shortDescription,
+            ShortDescription: commonForm.shortDescription || finalTitle,
             Enumeration: commonForm.enumeration,
             CustomWeights: commonForm.customWeights,
             Difficulty: Number(commonForm.difficulty) || 1,
@@ -333,7 +386,8 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
       if (questionType === 1 || questionType === 4) {
         // Multiple Choice / Multi-Select
         payload.degreeAnswerOptionList = options.map((opt, idx) => ({
-          TempQuestionKey: 0,
+          AnswerId: Number(opt.AnswerId ?? opt.answerId ?? 0),
+          TempQuestionKey: qKey,
           Text: opt.text,
           AnswerFeedback: opt.answerFeedback || "",
           IsCorrect: Boolean(opt.isCorrect),
@@ -341,16 +395,20 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
         }));
       } else if (questionType === 2) {
         // True / False
+        const trueAnswerId = Number(options.find(o => (o.text || "").toLowerCase() === "true")?.answerId || 0);
+        const falseAnswerId = Number(options.find(o => (o.text || "").toLowerCase() === "false")?.answerId || 0);
         payload.degreeAnswerOptionList = [
           {
-            TempQuestionKey: 0,
+            AnswerId: trueAnswerId,
+            TempQuestionKey: qKey,
             Text: "True",
             AnswerFeedback: tfFeedbackTrue,
             IsCorrect: tfCorrect === true,
             DisplayOrder: 1
           },
           {
-            TempQuestionKey: 0,
+            AnswerId: falseAnswerId,
+            TempQuestionKey: qKey,
             Text: "False",
             AnswerFeedback: tfFeedbackFalse,
             IsCorrect: tfCorrect === false,
@@ -361,7 +419,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
         // Fill-in-the-Blank
         payload.degreeQuestionTextComponentList = [
           {
-            TempQuestionKey: 0,
+            TempQuestionKey: qKey,
             TempQuestionTextComponentKey: 1,
             ComponentType: "Text",
             Content: fibPrefix,
@@ -721,10 +779,15 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
                           <button
                             type="button"
                             onClick={() => handleEditQuestion(q)}
-                            className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                            disabled={loadingQuestionDetailId === qId}
+                            className="rounded-lg border border-gray-200 p-1.5 text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 cursor-pointer disabled:opacity-50"
                             title="Edit Question"
                           >
-                            <PencilIcon className="size-3.5" />
+                            {loadingQuestionDetailId === qId ? (
+                              <div className="size-3.5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <PencilIcon className="size-3.5" />
+                            )}
                           </button>
 
                           <button
@@ -773,7 +836,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
                 <div className="sm:col-span-6">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Question Title / Short Description
+                    Question Title / Short Description <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -781,6 +844,7 @@ export default function QuestionMasterModal({ isOpen, onClose, quiz, onQuestions
                     value={commonForm.title}
                     onChange={(e) => setCommonForm(prev => ({ ...prev, title: e.target.value, shortDescription: e.target.value }))}
                     className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    required
                   />
                 </div>
 

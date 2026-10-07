@@ -56,9 +56,9 @@ function resolveErrorDescription(rawJson, defaultError = '') {
  */
 export function parseMainDegreeQuizListOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
-    const isSuccess = resolveSuccess(data, status);
-
     const rawList = data?.quizDegreeList || data?.QuizDegreeList || data?.degreeQuizList || data?.DegreeQuizList || data?.quizList || data?.QuizList || (Array.isArray(data) ? data : []);
+    const isHttpOk = status >= 200 && status < 300;
+    const isSuccess = (isHttpOk && Array.isArray(rawList)) || resolveSuccess(data, status);
     const quizDegreeList = Array.isArray(rawList)
         ? rawList.map(item => {
             const courseId = Number(
@@ -909,7 +909,22 @@ export function parseDegreeQuizQuestionsListOutput(rawJson = {}, status = 200) {
     const data = safeParseJson(rawJson);
     const isSuccess = resolveSuccess(data, status);
 
-    const rawList = data?.questionsList || data?.QuestionsList || data?.questionList || data?.QuestionList || (Array.isArray(data) ? data : []);
+    const rawPayload = data?.data || data?.Data || data;
+    const rawList =
+        rawPayload?.questionsList ||
+        rawPayload?.QuestionsList ||
+        rawPayload?.questionList ||
+        rawPayload?.QuestionList ||
+        rawPayload?.degreeQuestionList ||
+        rawPayload?.DegreeQuestionList ||
+        data?.questionsList ||
+        data?.QuestionsList ||
+        data?.questionList ||
+        data?.QuestionList ||
+        data?.degreeQuestionList ||
+        data?.DegreeQuestionList ||
+        (Array.isArray(rawPayload) ? rawPayload : (Array.isArray(data) ? data : []));
+
     const questionsList = Array.isArray(rawList)
         ? rawList.map(item => {
             const qId = Number(item?.questionsId ?? item?.QuestionsId ?? item?.questionId ?? item?.QuestionId ?? item?.id ?? 0);
@@ -967,7 +982,7 @@ export function parseDegreeQuizQuestionsListOutput(rawJson = {}, status = 200) {
         })
         : [];
 
-    const rawPageDetail = data?.pageDetail || data?.PageDetail || {};
+    const rawPageDetail = rawPayload?.pageDetail || rawPayload?.PageDetail || data?.pageDetail || data?.PageDetail || {};
     const pageDetail = {
         totalRecords: rawPageDetail?.totalRecords ?? rawPageDetail?.TotalRecords ?? questionsList.length,
         totalPoints: rawPageDetail?.totalPoints ?? rawPageDetail?.TotalPoints ?? 0,
@@ -1025,6 +1040,296 @@ export function parseDegreeQuizQuestionMasterAddUpdateErrorOutput(rawJson = {}, 
         status,
         message: resolveMessage(data, 'Failed to save quiz question'),
         errorDescription: resolveErrorDescription(data, 'Server error'),
+        rawData: data
+    };
+}
+
+/**
+ * 2.7C Parse Get Degree Question by Question ID Output
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuestionByQuestionId
+ */
+export function parseGetDegreeQuestionByQuestionIdOutput(rawJson = {}, status = 200) {
+    const data = safeParseJson(rawJson);
+    const isSuccess = resolveSuccess(data, status);
+
+    const rawPayload = data?.data || data?.Data || data;
+
+    // DegreeQuestionList can be at root or under data/Data
+    const rawQuestionList =
+        rawPayload?.degreeQuestionList ||
+        rawPayload?.DegreeQuestionList ||
+        data?.degreeQuestionList ||
+        data?.DegreeQuestionList ||
+        [];
+
+    const questionList = Array.isArray(rawQuestionList) ? rawQuestionList : [];
+
+    const question = (questionList.length > 0 ? questionList[0] : null) ||
+        rawPayload?.question ||
+        rawPayload?.Question ||
+        data?.question ||
+        data?.Question ||
+        {};
+
+    const rawAnswerOptions =
+        rawPayload?.degreeAnswerOptionList ||
+        rawPayload?.DegreeAnswerOptionList ||
+        data?.degreeAnswerOptionList ||
+        data?.DegreeAnswerOptionList ||
+        rawPayload?.answerOptions ||
+        rawPayload?.AnswerOptions ||
+        data?.answerOptions ||
+        data?.AnswerOptions ||
+        [];
+    const answerOptions = Array.isArray(rawAnswerOptions) ? rawAnswerOptions : [];
+
+    const rawTextComponents =
+        rawPayload?.degreeQuestionTextComponentList ||
+        rawPayload?.DegreeQuestionTextComponentList ||
+        data?.degreeQuestionTextComponentList ||
+        data?.DegreeQuestionTextComponentList ||
+        rawPayload?.textComponents ||
+        data?.textComponents ||
+        [];
+    const textComponents = Array.isArray(rawTextComponents) ? rawTextComponents : [];
+
+    const rawBlankAnswers =
+        rawPayload?.degreeBlankAnswerList ||
+        rawPayload?.DegreeBlankAnswerList ||
+        data?.degreeBlankAnswerList ||
+        data?.DegreeBlankAnswerList ||
+        rawPayload?.blankAnswers ||
+        data?.blankAnswers ||
+        [];
+    const blankAnswers = Array.isArray(rawBlankAnswers) ? rawBlankAnswers : [];
+
+    const matchingQuestionList = Array.isArray(rawPayload?.degreeMatchingQuestionList)
+        ? rawPayload.degreeMatchingQuestionList
+        : (Array.isArray(rawPayload?.DegreeMatchingQuestionList)
+            ? rawPayload.DegreeMatchingQuestionList
+            : (Array.isArray(data?.degreeMatchingQuestionList)
+                ? data.degreeMatchingQuestionList
+                : (Array.isArray(data?.DegreeMatchingQuestionList) ? data.DegreeMatchingQuestionList : [])));
+    const matchingQuestion = (matchingQuestionList.length > 0 ? matchingQuestionList[0] : null) ||
+        rawPayload?.matchingQuestion || data?.matchingQuestion || null;
+
+    const rawMatchingPairs =
+        rawPayload?.degreeMatchingPairList ||
+        rawPayload?.DegreeMatchingPairList ||
+        data?.degreeMatchingPairList ||
+        data?.DegreeMatchingPairList ||
+        rawPayload?.matchingPairs || data?.matchingPairs || [];
+    const matchingPairs = Array.isArray(rawMatchingPairs) ? rawMatchingPairs : [];
+
+    const rawMatchingChoices =
+        rawPayload?.degreeMatchingChoiceList ||
+        rawPayload?.DegreeMatchingChoiceList ||
+        data?.degreeMatchingChoiceList ||
+        data?.DegreeMatchingChoiceList ||
+        rawPayload?.matchingChoices || data?.matchingChoices || [];
+    const matchingChoices = Array.isArray(rawMatchingChoices) ? rawMatchingChoices : [];
+
+    const orderingQuestionList = Array.isArray(rawPayload?.degreeOrderingQuestionList)
+        ? rawPayload.degreeOrderingQuestionList
+        : (Array.isArray(rawPayload?.DegreeOrderingQuestionList)
+            ? rawPayload.DegreeOrderingQuestionList
+            : (Array.isArray(data?.degreeOrderingQuestionList)
+                ? data.degreeOrderingQuestionList
+                : (Array.isArray(data?.DegreeOrderingQuestionList) ? data.DegreeOrderingQuestionList : [])));
+    const orderingQuestion = (orderingQuestionList.length > 0 ? orderingQuestionList[0] : null) ||
+        rawPayload?.orderingQuestion || data?.orderingQuestion || null;
+
+    const rawOrderingItems =
+        rawPayload?.degreeOrderingItemList ||
+        rawPayload?.DegreeOrderingItemList ||
+        data?.degreeOrderingItemList ||
+        data?.DegreeOrderingItemList ||
+        rawPayload?.orderingItems || data?.orderingItems || [];
+    const orderingItems = Array.isArray(rawOrderingItems) ? rawOrderingItems : [];
+
+    const writtenList = Array.isArray(rawPayload?.degreeWrittenResponseSettingList)
+        ? rawPayload.degreeWrittenResponseSettingList
+        : (Array.isArray(rawPayload?.DegreeWrittenResponseSettingList)
+            ? rawPayload.DegreeWrittenResponseSettingList
+            : (Array.isArray(data?.degreeWrittenResponseSettingList)
+                ? data.degreeWrittenResponseSettingList
+                : (Array.isArray(data?.DegreeWrittenResponseSettingList) ? data.DegreeWrittenResponseSettingList : [])));
+    const writtenResponseSetting = (writtenList.length > 0 ? writtenList[0] : null) ||
+        rawPayload?.writtenResponseSetting || data?.writtenResponseSetting || null;
+
+    const rawShortAnswers =
+        rawPayload?.degreeShortAnswerBlankList ||
+        rawPayload?.DegreeShortAnswerBlankList ||
+        data?.degreeShortAnswerBlankList ||
+        data?.DegreeShortAnswerBlankList ||
+        rawPayload?.shortAnswers || data?.shortAnswers || [];
+    const shortAnswers = Array.isArray(rawShortAnswers) ? rawShortAnswers : [];
+
+    const arithmeticList = Array.isArray(rawPayload?.degreeArithmeticQuestionList)
+        ? rawPayload.degreeArithmeticQuestionList
+        : (Array.isArray(rawPayload?.DegreeArithmeticQuestionList)
+            ? rawPayload.DegreeArithmeticQuestionList
+            : (Array.isArray(data?.degreeArithmeticQuestionList)
+                ? data.degreeArithmeticQuestionList
+                : (Array.isArray(data?.DegreeArithmeticQuestionList) ? data.DegreeArithmeticQuestionList : [])));
+    const arithmeticQuestion = (arithmeticList.length > 0 ? arithmeticList[0] : null) ||
+        rawPayload?.arithmeticQuestion || data?.arithmeticQuestion || null;
+
+    const rawArithmeticVars =
+        rawPayload?.degreeArithmeticVariableList ||
+        rawPayload?.DegreeArithmeticVariableList ||
+        data?.degreeArithmeticVariableList ||
+        data?.DegreeArithmeticVariableList ||
+        rawPayload?.arithmeticVariables || data?.arithmeticVariables || [];
+    const arithmeticVariables = Array.isArray(rawArithmeticVars) ? rawArithmeticVars : [];
+
+    const sigFigsList = Array.isArray(rawPayload?.degreeSignificantFiguresQuestionList)
+        ? rawPayload.degreeSignificantFiguresQuestionList
+        : (Array.isArray(rawPayload?.DegreeSignificantFiguresQuestionList)
+            ? rawPayload.DegreeSignificantFiguresQuestionList
+            : (Array.isArray(data?.degreeSignificantFiguresQuestionList)
+                ? data.degreeSignificantFiguresQuestionList
+                : (Array.isArray(data?.DegreeSignificantFiguresQuestionList) ? data.DegreeSignificantFiguresQuestionList : [])));
+    const significantFiguresQuestion = (sigFigsList.length > 0 ? sigFigsList[0] : null) ||
+        rawPayload?.significantFiguresQuestion || data?.significantFiguresQuestion || null;
+
+    const rawSigFigsVars =
+        rawPayload?.degreeSignificantFiguresVariableList ||
+        rawPayload?.DegreeSignificantFiguresVariableList ||
+        data?.degreeSignificantFiguresVariableList ||
+        data?.DegreeSignificantFiguresVariableList ||
+        rawPayload?.significantFiguresVariables || data?.significantFiguresVariables || [];
+    const significantFiguresVariables = Array.isArray(rawSigFigsVars) ? rawSigFigsVars : [];
+
+    const rawMultiShortAnswers =
+        rawPayload?.degreeMultiShortAnswerList ||
+        rawPayload?.DegreeMultiShortAnswerList ||
+        data?.degreeMultiShortAnswerList ||
+        data?.DegreeMultiShortAnswerList ||
+        rawPayload?.multiShortAnswers || data?.multiShortAnswers || [];
+    const multiShortAnswers = Array.isArray(rawMultiShortAnswers) ? rawMultiShortAnswers : [];
+
+    const multiInputBoxList = Array.isArray(rawPayload?.degreeMultiShortAnswerInputBox)
+        ? rawPayload.degreeMultiShortAnswerInputBox
+        : (Array.isArray(rawPayload?.DegreeMultiShortAnswerInputBox)
+            ? rawPayload.DegreeMultiShortAnswerInputBox
+            : (Array.isArray(data?.degreeMultiShortAnswerInputBox)
+                ? data.degreeMultiShortAnswerInputBox
+                : (Array.isArray(data?.DegreeMultiShortAnswerInputBox) ? data.DegreeMultiShortAnswerInputBox : [])));
+    const multiShortInputBox = (multiInputBoxList.length > 0 ? multiInputBoxList[0] : null) ||
+        rawPayload?.multiShortInputBox || data?.multiShortInputBox || null;
+
+    const likertList = Array.isArray(rawPayload?.degreeLikertQuestionList)
+        ? rawPayload.degreeLikertQuestionList
+        : (Array.isArray(rawPayload?.DegreeLikertQuestionList)
+            ? rawPayload.DegreeLikertQuestionList
+            : (Array.isArray(data?.degreeLikertQuestionList)
+                ? data.degreeLikertQuestionList
+                : (Array.isArray(data?.DegreeLikertQuestionList) ? data.DegreeLikertQuestionList : [])));
+    const likertQuestion = (likertList.length > 0 ? likertList[0] : null) ||
+        rawPayload?.likertQuestion || data?.likertQuestion || null;
+
+    const rawLikertStatements =
+        rawPayload?.degreeLikertStatementList ||
+        rawPayload?.DegreeLikertStatementList ||
+        data?.degreeLikertStatementList ||
+        data?.DegreeLikertStatementList ||
+        rawPayload?.likertStatements || data?.likertStatements || [];
+    const likertStatements = Array.isArray(rawLikertStatements) ? rawLikertStatements : [];
+
+    const questionsId = Number(
+        rawPayload?.questionsId ??
+        rawPayload?.QuestionsId ??
+        rawPayload?.questionId ??
+        rawPayload?.QuestionId ??
+        data?.questionsId ??
+        data?.QuestionsId ??
+        data?.questionId ??
+        data?.QuestionId ??
+        0
+    );
+
+    const quizId = Number(
+        rawPayload?.quizId ??
+        rawPayload?.QuizId ??
+        data?.quizId ??
+        data?.QuizId ??
+        0
+    );
+
+    return {
+        success: isSuccess,
+        status,
+        message: resolveMessage(data, isSuccess ? 'Question fetched successfully' : 'Failed to fetch question'),
+        questionsId,
+        quizId,
+        question: {
+            tempQuestionKey: question?.tempQuestionKey ?? question?.TempQuestionKey ?? 0,
+            degreeQuestionType: Number(question?.degreeQuestionType ?? question?.DegreeQuestionType ?? question?.questionTypeId ?? question?.QuestionTypeId ?? 1),
+            title: question?.title ?? question?.Title ?? '',
+            questionText: question?.questionText ?? question?.QuestionText ?? question?.finalQuestionName ?? question?.FinalQuestionName ?? '',
+            questionFeedback: question?.questionFeedback ?? question?.QuestionFeedback ?? '',
+            hint: question?.hint ?? question?.Hint ?? '',
+            shortDescription: question?.shortDescription ?? question?.ShortDescription ?? '',
+            enumeration: String(question?.enumeration ?? question?.Enumeration ?? '1'),
+            customWeights: question?.customWeights ?? question?.CustomWeights ?? '',
+            difficulty: Number(question?.difficulty ?? question?.Difficulty ?? 1),
+            points: Number(question?.points ?? question?.Points ?? 1),
+            randomizeAnswers: Boolean(question?.randomizeAnswers ?? question?.RandomizeAnswers),
+            imageUrl: question?.imageUrl ?? question?.ImageUrl ?? '',
+            howPointAssignedToBlanks: question?.howPointAssignedToBlanks ?? question?.HowPointAssignedToBlanks ?? 'AllOrNothing'
+        },
+        answerOptions: answerOptions.map((opt, idx) => ({
+            answerId: Number(opt?.answerId ?? opt?.AnswerId ?? 0),
+            tempQuestionKey: opt?.tempQuestionKey ?? opt?.TempQuestionKey ?? 0,
+            text: opt?.text || opt?.Text || '',
+            answerFeedback: opt?.answerFeedback || opt?.AnswerFeedback || '',
+            isCorrect: Boolean(opt?.isCorrect ?? opt?.IsCorrect),
+            displayOrder: Number(opt?.displayOrder ?? opt?.DisplayOrder ?? idx + 1)
+        })),
+        textComponents: textComponents.map((c, idx) => ({
+            componentType: c?.componentType || c?.ComponentType || 'Text',
+            content: c?.content || c?.Content || '',
+            blankPoints: Number(c?.blankPoints ?? c?.BlankPoints ?? 0),
+            displayOrder: Number(c?.displayOrder ?? c?.DisplayOrder ?? idx + 1)
+        })),
+        blankAnswers: blankAnswers.map(b => ({
+            answer: b?.answer || b?.Answer || '',
+            weight: Number(b?.weight ?? b?.Weight ?? 100),
+            evaluationTypeId: Number(b?.evaluationTypeId ?? b?.EvaluationTypeId ?? 1),
+            feedback: b?.feedback || b?.Feedback || '',
+            blankNumber: Number(b?.blankNumber ?? b?.BlankNumber ?? 1)
+        })),
+        matchingQuestion,
+        matchingPairs,
+        matchingChoices,
+        orderingQuestion,
+        orderingItems,
+        writtenResponseSetting,
+        shortAnswers,
+        arithmeticQuestion,
+        arithmeticVariables,
+        significantFiguresQuestion,
+        significantFiguresVariables,
+        likertQuestion,
+        likertStatements,
+        multiShortAnswers,
+        multiShortInputBox,
+        rawData: data
+    };
+}
+
+export function parseGetDegreeQuestionByQuestionIdErrorOutput(rawJson = {}, status = 500) {
+    const data = safeParseJson(rawJson);
+    return {
+        success: false,
+        status,
+        message: resolveMessage(data, 'Failed to fetch question details'),
+        errorDescription: resolveErrorDescription(data, 'Server error'),
+        questionsId: 0,
+        quizId: 0,
+        question: {},
+        answerOptions: [],
         rawData: data
     };
 }

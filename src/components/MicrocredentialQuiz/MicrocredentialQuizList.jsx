@@ -232,7 +232,6 @@ export default function MicrocredentialQuizList() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalRecords, setTotalRecords] = useState(0);
 
   // Sorting
   const [sortConfig, setSortConfig] = useState({
@@ -258,27 +257,36 @@ export default function MicrocredentialQuizList() {
   // ==========================================
   // API: Fetch Main Quizzes
   // ==========================================
-  const loadQuizzes = useCallback(async () => {
+  const loadQuizzes = useCallback(async (overrides = {}) => {
     setLoading(true);
     setErrorMessage("");
 
     try {
+      const activeTitle = overrides.title !== undefined ? overrides.title : filterTitle;
+      const activeCreater = overrides.creater !== undefined ? overrides.creater : filterCreater;
+      const activeStreamId = overrides.streamId !== undefined ? overrides.streamId : filterStreamId;
+      const activeStream = overrides.stream !== undefined ? overrides.stream : filterStream;
+      const activeCourseId = overrides.courseId !== undefined ? overrides.courseId : filterCourseId;
+      const activeMicro = overrides.micro !== undefined ? overrides.micro : filterMicrocredential;
+      const activeModuleId = overrides.moduleId !== undefined ? overrides.moduleId : filterModuleId;
+      const activeDueDate = overrides.dueDate !== undefined ? overrides.dueDate : filterDueDate;
+
       const payload = {
-        pageNo: currentPage,
-        pageSize: pageSize,
-        orderByColumn: sortConfig.key || "UpdatedOn",
-        orderByDirection: sortConfig.direction || "DESC",
+        pageNo: 1,
+        pageSize: 1000,
+        orderByColumn: "UpdatedOn",
+        orderByDirection: "DESC",
         totalRecords: 0,
-        searchInput: searchQuery.trim(),
+        searchInput: "", // Must remain empty: backend stored procedure returns error if searchInput is non-empty
         educationTypeId: 2, // Microcredential
-        quizTitle: filterTitle.trim(),
-        streamId: filterStreamId || 0,
-        stream: filterStream.trim(),
-        microcredentialCourseId: filterCourseId || 0,
-        microcredentialName: filterMicrocredential.trim(),
-        microcredentialModuleMasterId: filterModuleId || 0,
-        quizCreaterName: filterCreater.trim(),
-        dueDate: filterDueDate
+        quizTitle: activeTitle.trim(),
+        streamId: activeStreamId || 0,
+        stream: activeStream.trim(),
+        microcredentialCourseId: activeCourseId || 0,
+        microcredentialName: activeMicro.trim(),
+        microcredentialModuleMasterId: activeModuleId || 0,
+        quizCreaterName: activeCreater.trim(),
+        dueDate: activeDueDate
       };
 
       const res = await fetchPaginatedMicrocredentialQuizList(payload);
@@ -286,7 +294,6 @@ export default function MicrocredentialQuizList() {
       if (res && res.success !== false) {
         const list = res.quizDegreeList || res.degreeQuizList || [];
         setQuizzes(list);
-        setTotalRecords(res.pageDetail?.totalRecords || res.totalRecords || list.length);
       } else {
         setErrorMessage(res?.message || res?.errorDescription || "Failed to load quizzes.");
         setQuizzes([]);
@@ -299,10 +306,6 @@ export default function MicrocredentialQuizList() {
       setLoading(false);
     }
   }, [
-    currentPage,
-    pageSize,
-    sortConfig,
-    searchQuery,
     filterTitle,
     filterCreater,
     filterStreamId,
@@ -313,15 +316,76 @@ export default function MicrocredentialQuizList() {
     filterDueDate,
   ]);
 
+  // Initial load
   useEffect(() => {
     loadQuizzes();
-  }, [loadQuizzes]);
+  }, []); // Run on mount
+
+  // ==========================================
+  // CLIENT-SIDE FILTERING, SORTING & PAGINATION
+  // ==========================================
+  const filteredQuizzes = useMemo(() => {
+    if (!searchQuery.trim()) return quizzes;
+    const q = searchQuery.toLowerCase().trim();
+    return quizzes.filter((quiz) => {
+      const title = (quiz.quizTitle || quiz.QuizTitle || "").toLowerCase();
+      const moduleName = (quiz.moduleName || quiz.ModuleName || "").toLowerCase();
+      const course = (quiz.microcredentialCourseName || quiz.microcredentialName || quiz.courseName || "").toLowerCase();
+      const stream = (quiz.streamName || quiz.StreamName || "").toLowerCase();
+      const creator = (quiz.quizCreatedName || quiz.quizCreaterName || quiz.creatorName || "").toLowerCase();
+      const desc = (quiz.quizDescription || quiz.QuizDescription || "").toLowerCase();
+      const dueDate = (quiz.dueDate || quiz.DueDate || "").toLowerCase();
+
+      return (
+        title.includes(q) ||
+        moduleName.includes(q) ||
+        course.includes(q) ||
+        stream.includes(q) ||
+        creator.includes(q) ||
+        desc.includes(q) ||
+        dueDate.includes(q)
+      );
+    });
+  }, [quizzes, searchQuery]);
+
+  const sortedQuizzes = useMemo(() => {
+    const list = [...filteredQuizzes];
+    if (!sortConfig.key) return list;
+
+    list.sort((a, b) => {
+      let valA = a[sortConfig.key] ?? a[sortConfig.key.toLowerCase()] ?? "";
+      let valB = b[sortConfig.key] ?? b[sortConfig.key.toLowerCase()] ?? "";
+
+      if (sortConfig.key === "UpdatedOn" || sortConfig.key === "CreatedOn" || sortConfig.key === "dueDate") {
+        const timeA = new Date(valA).getTime() || 0;
+        const timeB = new Date(valB).getTime() || 0;
+        return sortConfig.direction === "ASC" ? timeA - timeB : timeB - timeA;
+      }
+
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      if (strA < strB) return sortConfig.direction === "ASC" ? -1 : 1;
+      if (strA > strB) return sortConfig.direction === "ASC" ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [filteredQuizzes, sortConfig]);
+
+  const totalFilteredRecords = sortedQuizzes.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredRecords / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedQuizzes = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return sortedQuizzes.slice(start, start + pageSize);
+  }, [sortedQuizzes, safeCurrentPage, pageSize]);
 
   // ==========================================
   // HANDLERS: Filters & Search
   // ==========================================
   const handleFilterSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setCurrentPage(1);
     loadQuizzes();
   };
@@ -339,6 +403,16 @@ export default function MicrocredentialQuizList() {
     setModulesList([]);
     fetchCourses("");
     setCurrentPage(1);
+    loadQuizzes({
+      title: "",
+      creater: "",
+      streamId: 0,
+      stream: "",
+      courseId: 0,
+      micro: "",
+      moduleId: 0,
+      dueDate: "",
+    });
   };
 
   const handleSort = (columnKey) => {
@@ -693,7 +767,10 @@ export default function MicrocredentialQuizList() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Search..."
               className="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-1.5 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
             />
@@ -745,14 +822,22 @@ export default function MicrocredentialQuizList() {
                     <div>Loading quizzes...</div>
                   </td>
                 </tr>
-              ) : quizzes.length === 0 ? (
+              ) : paginatedQuizzes.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-xs text-gray-500 dark:text-gray-400">
-                    No microcredential quizzes found. Click <strong>+ Add New Quiz</strong> to create one.
+                    {searchQuery.trim() ? (
+                      <div>
+                        No quizzes match your search &ldquo;<strong>{searchQuery}</strong>&rdquo;.
+                      </div>
+                    ) : (
+                      <div>
+                        No microcredential quizzes found. Click <strong>+ Add New Quiz</strong> to create one.
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
-                quizzes.map((quiz) => {
+                paginatedQuizzes.map((quiz) => {
                   const qId = quiz.quizId || quiz.QuizId || 0;
                   const isActive = Boolean(quiz.isActive ?? quiz.IsActive);
                   const moduleName = quiz.moduleName || quiz.ModuleName || "";
@@ -885,29 +970,34 @@ export default function MicrocredentialQuizList() {
         {/* Table Pagination */}
         <div className="flex flex-wrap items-center justify-between gap-4 p-5 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
           <div>
-            Showing {quizzes.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} to{" "}
-            {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} entries
+            Showing {totalFilteredRecords > 0 ? (safeCurrentPage - 1) * pageSize + 1 : 0} to{" "}
+            {Math.min(safeCurrentPage * pageSize, totalFilteredRecords)} of {totalFilteredRecords} entries
+            {searchQuery.trim() && totalFilteredRecords !== quizzes.length && (
+              <span className="ml-1 text-gray-400">
+                (filtered from {quizzes.length} total entries)
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={currentPage <= 1}
+              disabled={safeCurrentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium shadow-xs disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium shadow-xs disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               Previous
             </button>
 
             <span className="rounded-lg bg-brand-500 px-3 py-1.5 font-semibold text-white">
-              {currentPage}
+              {safeCurrentPage}
             </span>
 
             <button
               type="button"
-              disabled={currentPage * pageSize >= totalRecords}
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium shadow-xs disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800"
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium shadow-xs disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
             >
               Next
             </button>

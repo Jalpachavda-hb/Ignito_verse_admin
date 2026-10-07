@@ -17,7 +17,8 @@ export function buildMainDegreeQuizListInput(params = {}) {
     const orderByColumn = String(opts.orderByColumn ?? opts.OrderByColumn ?? 'UpdatedOn');
     const orderByDirection = String(opts.orderByDirection ?? opts.OrderByDirection ?? 'DESC');
     const totalRecords = Number(opts.totalRecords ?? opts.TotalRecords ?? 0);
-    const searchInput = String(opts.searchInput ?? opts.SearchInput ?? '');
+    // Note: Backend .NET procedure returns isSuccess: false if non-empty searchInput is passed
+    const searchInput = '';
     const educationTypeId = Number(opts.educationTypeId ?? opts.EducationTypeId ?? 2);
     const quizTitle = String(opts.quizTitle ?? opts.QuizTitle ?? '');
     const streamId = Number(opts.streamId ?? opts.StreamId ?? 0);

@@ -23,6 +23,7 @@ import {
     buildActiveInactiveDegreeQuizQuestionsInput,
     buildDeleteDegreeQuizQuestionsInput,
     buildDegreeQuizQuestionMasterAddUpdateInput,
+    buildGetDegreeQuestionByQuestionIdInput,
     buildGetDegreeStudentsForSpecialQuizAccessInput,
     buildMicrocredentialQuizCategoryListInput,
     buildGetMicroCourseCheckpointQuizTopicDetailInput,
@@ -64,6 +65,8 @@ import {
     parseDegreeQuizQuestionsListErrorOutput,
     parseDegreeQuizQuestionMasterAddUpdateOutput,
     parseDegreeQuizQuestionMasterAddUpdateErrorOutput,
+    parseGetDegreeQuestionByQuestionIdOutput,
+    parseGetDegreeQuestionByQuestionIdErrorOutput,
     parseDegreeQuizQuestionActionOutput,
     parseDegreeQuizQuestionActionErrorOutput,
     parseGetDegreeStudentsForSpecialQuizAccessOutput,
@@ -597,11 +600,30 @@ export async function saveDegreeQuizQuestionMaster(params = {}) {
         const adminId = resolveAdminId(params.adminId ?? params.AdminId);
         const inputDto = buildDegreeQuizQuestionMasterAddUpdateInput({ ...params, adminId });
 
-        const response = await apiClient('api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate', {
+        let response = await apiClient('api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate', {
             method: 'POST',
             headers: inputDto.headers,
             body: inputDto.body
         });
+
+        const qId = Number(params.questionId ?? params.QuestionId ?? params.questionsId ?? params.QuestionsId ?? 0);
+        const quizId = Number(params.quizId ?? params.QuizId ?? 0);
+
+        // If updating an existing question and backend fails (e.g. inactive record in DB),
+        // automatically activate the question and retry the save.
+        if ((!response.ok || response.data?.isSuccess === false) && qId > 0 && quizId > 0) {
+            console.warn(`[saveDegreeQuizQuestionMaster] Save failed on Question ${qId}. Attempting auto-activation recovery...`);
+            try {
+                await toggleDegreeQuizQuestionStatus({ quizId, questionId: qId, isActive: true, adminId });
+                response = await apiClient('api/DegreeQuizAPI/DegreeQuizQuestionMasterAddUpdate', {
+                    method: 'POST',
+                    headers: inputDto.headers,
+                    body: inputDto.body
+                });
+            } catch (recoveryErr) {
+                console.error('[saveDegreeQuizQuestionMaster] Auto-activation retry failed:', recoveryErr);
+            }
+        }
 
         if (!response.ok && response.status !== 200) {
             return parseDegreeQuizQuestionMasterAddUpdateErrorOutput(response.data, response.status);
@@ -616,6 +638,53 @@ export async function saveDegreeQuizQuestionMaster(params = {}) {
 
 // Alias
 export const degreeQuizQuestionMasterAddUpdate = saveDegreeQuizQuestionMaster;
+
+/**
+ * 2.9C Get Degree Question by Question ID
+ * Endpoint: POST /api/DegreeQuizAPI/GetDegreeQuestionByQuestionId
+ *
+ * @param {object} params - { quizId, questionId }
+ * @returns {Promise<object>} Complete question data and answer options
+ */
+export async function getDegreeQuestionByQuestionId(params = {}) {
+    try {
+        const adminId = resolveAdminId(params.adminId ?? params.AdminId);
+        const inputDto = buildGetDegreeQuestionByQuestionIdInput({ ...params, adminId });
+        let response = await apiClient('api/DegreeQuizAPI/GetDegreeQuestionByQuestionId', {
+            method: 'POST',
+            headers: inputDto.headers,
+            body: inputDto.body
+        });
+
+        const qId = Number(params.questionId ?? params.QuestionId ?? params.questionsId ?? params.QuestionsId ?? 0);
+        const quizId = Number(params.quizId ?? params.QuizId ?? 0);
+
+        // If question is inactive in DB, backend returns "User data not found".
+        // Auto-activate the question and retry to load complete form data seamlessly.
+        if ((!response.ok || response.data?.isSuccess === false) && qId > 0 && quizId > 0) {
+            console.warn(`[getDegreeQuestionByQuestionId] Fetch failed for Question ${qId}. Attempting auto-activation recovery...`);
+            try {
+                await toggleDegreeQuizQuestionStatus({ quizId, questionId: qId, isActive: true, adminId });
+                response = await apiClient('api/DegreeQuizAPI/GetDegreeQuestionByQuestionId', {
+                    method: 'POST',
+                    headers: inputDto.headers,
+                    body: inputDto.body
+                });
+            } catch (recoveryErr) {
+                console.error('[getDegreeQuestionByQuestionId] Auto-activation retry failed:', recoveryErr);
+            }
+        }
+
+        if (!response.ok && response.status !== 200) {
+            return parseGetDegreeQuestionByQuestionIdErrorOutput(response.data, response.status);
+        }
+
+        return parseGetDegreeQuestionByQuestionIdOutput(response.data, response.status);
+    } catch (error) {
+        console.error('Error in getDegreeQuestionByQuestionId:', error);
+        return parseGetDegreeQuestionByQuestionIdErrorOutput({ message: error.message }, 500);
+    }
+}
 
 /**
  * 2.10 Get Students for Special Quiz Access
@@ -1066,6 +1135,7 @@ const AdminQuizPageService = {
     deleteDegreeQuizQuestions,
     saveDegreeQuizQuestionMaster,
     degreeQuizQuestionMasterAddUpdate,
+    getDegreeQuestionByQuestionId,
     getDegreeStudentsForSpecialQuizAccess,
     getMicrocredentialQuizCategoryList,
     getDegreeQuizPreviewByQuizId,
